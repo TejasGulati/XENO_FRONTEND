@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   Users,
   ShoppingBag,
@@ -6,38 +6,64 @@ import {
 } from 'lucide-react';
 
 const Navbar = () => {
-  return (
-    <nav className="bg-gray-50 text-gray-800 p-4 border-b border-gray-200 shadow-sm">
-      <div className="container mx-auto flex justify-between items-center">
-        {/* Logo and Brand */}
-        <Link to="/" className="flex items-center space-x-2">
-          <div className="h-9 w-9 bg-gray-800 rounded-md flex items-center justify-center">
-            <span className="text-white font-bold text-lg">X</span>
-          </div>
-          <span className="text-xl font-semibold hover:text-gray-600 transition-colors">
-            Xeno CRM
-          </span>
-        </Link>
+  const location = useLocation();
 
-        {/* Navigation Links */}
-        <div className="flex space-x-8 items-center">
-          <NavItem to="/customers" icon={<Users className="h-5 w-5" />} text="Customers" />
-          <NavItem to="/orders" icon={<ShoppingBag className="h-5 w-5" />} text="Orders" />
-          <NavItem to="/campaigns" icon={<Megaphone className="h-5 w-5" />} text="Campaigns" />
+  return (
+    <nav className="bg-white border-b border-gray-100 shadow-sm">
+      <div className="container mx-auto px-6">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo and Brand */}
+          <Link to="/" className="flex items-center space-x-3 group">
+            <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center transition-all group-hover:from-blue-700 group-hover:to-indigo-700">
+              <span className="text-white font-bold text-lg">X</span>
+            </div>
+            <span className="text-xl font-semibold text-gray-800 group-hover:text-gray-600 transition-colors">
+              Xeno CRM
+            </span>
+          </Link>
+
+          {/* Navigation Links */}
+          <div className="flex space-x-6 items-center">
+            <NavItem 
+              to="/customers" 
+              icon={<Users className="h-5 w-5" />} 
+              text="Customers" 
+              isActive={location.pathname === '/customers'}
+            />
+            <NavItem 
+              to="/orders" 
+              icon={<ShoppingBag className="h-5 w-5" />} 
+              text="Orders" 
+              isActive={location.pathname === '/orders'}
+            />
+            <NavItem 
+              to="/campaigns" 
+              icon={<Megaphone className="h-5 w-5" />} 
+              text="Campaigns" 
+              isActive={location.pathname === '/campaigns'}
+            />
+          </div>
         </div>
       </div>
     </nav>
   );
 };
 
-// Reusable nav link with icon
-const NavItem = ({ to, icon, text }) => (
+// Enhanced NavItem with active state
+const NavItem = ({ to, icon, text, isActive }) => (
   <Link
     to={to}
-    className="flex items-center space-x-2 text-sm font-medium hover:text-gray-600 transition-colors"
+    className={`relative flex items-center space-x-2 px-2 py-1.5 rounded-md text-sm font-medium transition-colors
+      ${isActive 
+        ? 'text-blue-600 bg-blue-50' 
+        : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+      }`}
   >
     {icon}
     <span>{text}</span>
+    {isActive && (
+      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
+    )}
   </Link>
 );
 

@@ -1,34 +1,35 @@
 import { Link } from 'react-router-dom';
-import { Home, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Home, AlertCircle, ArrowLeft, Mail } from 'lucide-react';
 
 const NotFound = () => {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-      <div className="max-w-md w-full text-center">
-        <div className="mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="h-24 w-24 rounded-full bg-red-100 flex items-center justify-center">
-              <AlertCircle className="h-12 w-12 text-red-500" />
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-center p-6">
+      <div className="max-w-md w-full bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+        <div className="p-8 text-center">
+          <div className="flex justify-center mb-6">
+            <div className="h-20 w-20 rounded-full bg-red-50 flex items-center justify-center shadow-inner">
+              <AlertCircle className="h-10 w-10 text-red-500" />
             </div>
           </div>
-          <h1 className="text-6xl font-bold text-gray-800 mb-2">404</h1>
-          <h2 className="text-2xl font-semibold text-gray-700 mb-4">Page Not Found</h2>
-          <p className="text-gray-600 mb-8">
+          
+          <h1 className="text-5xl font-bold text-gray-800 mb-3">404</h1>
+          <h2 className="text-xl font-semibold text-gray-700 mb-4">Page Not Found</h2>
+          <p className="text-gray-500 mb-6">
             The page you're looking for doesn't exist or has been moved. 
             Please check the URL or navigate back to the home page.
           </p>
           
-          <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               to="/"
-              className="flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-md"
+              className="flex items-center justify-center px-5 py-2.5 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm font-medium"
             >
               <Home className="h-5 w-5 mr-2" />
               Go to Dashboard
             </Link>
             <button 
               onClick={() => window.history.back()}
-              className="flex items-center justify-center px-6 py-3 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              className="flex items-center justify-center px-5 py-2.5 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-medium"
             >
               <ArrowLeft className="h-5 w-5 mr-2" />
               Go Back
@@ -36,10 +37,7 @@ const NotFound = () => {
           </div>
         </div>
         
-        <div className="mt-12">
-          <p className="text-sm text-gray-500">
-            If you believe this is an error, please contact support.
-          </p>
+        <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 text-center">
         </div>
       </div>
     </div>
