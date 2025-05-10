@@ -3,29 +3,29 @@ import {
   Users, 
   ShoppingBag, 
   Megaphone, 
-  TrendingUp, 
-  Calendar, 
-  PieChart, 
-  BarChart3, 
-  ActivitySquare, 
-  ArrowUp, 
-  ArrowDown,
   DollarSign,
+  Calendar,
+  CheckCircle,
   Clock
 } from 'lucide-react';
 
 const Home = () => {
   const { customers, orders, campaigns, loading } = useAppContext();
   
-  // Calculate total revenue
-  const totalRevenue = orders.reduce((sum, order) => sum + order.orderAmount, 0);
+  // Calculate total revenue from completed orders only
+  const totalRevenue = orders
+    .filter(order => order.status === 'completed')
+    .reduce((sum, order) => sum + order.orderAmount, 0);
   
-  // Get recent orders
-  const recentOrders = orders.slice(0, 5);
+  // Get recent orders sorted by date
+  const recentOrders = [...orders]
+    .sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate))
+    .slice(0, 5);
   
-  // Calculate stats
+  // Calculate order stats
   const completedOrders = orders.filter(order => order.status === 'completed').length;
   const pendingOrders = orders.filter(order => order.status === 'pending').length;
+  const cancelledOrders = orders.filter(order => order.status === 'cancelled').length;
   
   if (loading) return (
     <div className="flex justify-center items-center h-64">
@@ -54,13 +54,7 @@ const Home = () => {
           </div>
           <div className="ml-4">
             <p className="text-sm font-medium text-gray-500">Total Customers</p>
-            <div className="flex items-center">
-              <h2 className="text-2xl font-bold text-gray-800 mr-2">{customers.length}</h2>
-              <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded-full flex items-center">
-                <ArrowUp className="h-3 w-3 mr-1" />
-                12%
-              </span>
-            </div>
+            <h2 className="text-2xl font-bold text-gray-800">{customers.length}</h2>
           </div>
         </div>
         
@@ -70,45 +64,27 @@ const Home = () => {
           </div>
           <div className="ml-4">
             <p className="text-sm font-medium text-gray-500">Total Orders</p>
-            <div className="flex items-center">
-              <h2 className="text-2xl font-bold text-gray-800 mr-2">{orders.length}</h2>
-              <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded-full flex items-center">
-                <ArrowUp className="h-3 w-3 mr-1" />
-                8%
-              </span>
-            </div>
+            <h2 className="text-2xl font-bold text-gray-800">{orders.length}</h2>
           </div>
         </div>
         
-        <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-light-blue-400 flex items-center">
-          <div className="bg-blue-100 p-3 rounded-full">
-            <Megaphone className="h-6 w-6 text-blue-600" />
+        <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-purple-600 flex items-center">
+          <div className="bg-purple-100 p-3 rounded-full">
+            <Megaphone className="h-6 w-6 text-purple-600" />
           </div>
           <div className="ml-4">
             <p className="text-sm font-medium text-gray-500">Active Campaigns</p>
-            <div className="flex items-center">
-              <h2 className="text-2xl font-bold text-gray-800 mr-2">{campaigns.length}</h2>
-              <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded-full flex items-center">
-                <ArrowUp className="h-3 w-3 mr-1" />
-                5%
-              </span>
-            </div>
+            <h2 className="text-2xl font-bold text-gray-800">{campaigns.length}</h2>
           </div>
         </div>
         
-        <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-red-400 flex items-center">
+        <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-red-500 flex items-center">
           <div className="bg-red-100 p-3 rounded-full">
             <DollarSign className="h-6 w-6 text-red-500" />
           </div>
           <div className="ml-4">
             <p className="text-sm font-medium text-gray-500">Total Revenue</p>
-            <div className="flex items-center">
-              <h2 className="text-2xl font-bold text-gray-800 mr-2">${totalRevenue.toFixed(2)}</h2>
-              <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded-full flex items-center">
-                <ArrowUp className="h-3 w-3 mr-1" />
-                15%
-              </span>
-            </div>
+            <h2 className="text-2xl font-bold text-gray-800">${totalRevenue.toFixed(2)}</h2>
           </div>
         </div>
       </div>
@@ -120,7 +96,6 @@ const Home = () => {
           <div className="p-6 border-b border-gray-100">
             <div className="flex items-center justify-between mb-1">
               <h2 className="text-xl font-semibold text-gray-800">Recent Orders</h2>
-              <button className="text-sm text-blue-600 hover:text-blue-800 transition-colors">View All</button>
             </div>
             <p className="text-sm text-gray-500">Latest customer orders across your store</p>
           </div>
@@ -164,17 +139,17 @@ const Home = () => {
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           <div className="p-6 border-b border-gray-100">
             <h2 className="text-xl font-semibold text-gray-800 mb-1">Order Summary</h2>
-            <p className="text-sm text-gray-500">30-day overview of your orders</p>
+            <p className="text-sm text-gray-500">Overview of your orders</p>
           </div>
           
           <div className="p-6">
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="bg-green-50 rounded-lg p-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-600">Completed</span>
                     <span className="text-green-600 bg-green-100 rounded-full h-6 w-6 flex items-center justify-center">
-                      <CheckCircleIcon className="h-4 w-4" />
+                      <CheckCircle className="h-4 w-4" />
                     </span>
                   </div>
                   <p className="text-2xl font-bold text-gray-800 mt-2">{completedOrders}</p>
@@ -189,31 +164,39 @@ const Home = () => {
                   </div>
                   <p className="text-2xl font-bold text-gray-800 mt-2">{pendingOrders}</p>
                 </div>
-              </div>
-              
-              <div className="mt-6">
-                <h3 className="text-sm font-medium text-gray-600 mb-3">Revenue Trend</h3>
-                <div className="h-32 w-full bg-gray-50 rounded-lg flex items-end justify-around px-2 pb-2">
-                  {[40, 65, 50, 80, 60, 55, 90].map((height, index) => (
-                    <div key={index} className="w-6 bg-blue-600 rounded-t-sm" style={{ height: `${height}%` }}></div>
-                  ))}
-                </div>
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>Mon</span>
-                  <span>Tue</span>
-                  <span>Wed</span>
-                  <span>Thu</span>
-                  <span>Fri</span>
-                  <span>Sat</span>
-                  <span>Sun</span>
+                
+                <div className="bg-red-50 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600">Cancelled</span>
+                    <span className="text-red-600 bg-red-100 rounded-full h-6 w-6 flex items-center justify-center">
+                      <CheckCircle className="h-4 w-4" />
+                    </span>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-800 mt-2">{cancelledOrders}</p>
                 </div>
               </div>
               
               <div className="mt-6">
-                <button className="w-full py-2 bg-blue-600 text-white rounded-md flex items-center justify-center hover:bg-blue-700 transition-colors">
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  View Detailed Analytics
-                </button>
+                <h3 className="text-sm font-medium text-gray-600 mb-3">Order Status Distribution</h3>
+                <div className="h-4 w-full bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-green-500" 
+                    style={{ width: `${(completedOrders / orders.length) * 100}%` }}
+                  ></div>
+                  <div 
+                    className="h-full bg-yellow-500" 
+                    style={{ width: `${(pendingOrders / orders.length) * 100}%` }}
+                  ></div>
+                  <div 
+                    className="h-full bg-red-500" 
+                    style={{ width: `${(cancelledOrders / orders.length) * 100}%` }}
+                  ></div>
+                </div>
+                <div className="flex justify-between text-xs text-gray-500 mt-2">
+                  <span>Completed: {completedOrders}</span>
+                  <span>Pending: {pendingOrders}</span>
+                  <span>Cancelled: {cancelledOrders}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -222,12 +205,5 @@ const Home = () => {
     </div>
   );
 };
-
-// This is a simple check circle icon for the completed orders
-const CheckCircleIcon = ({ className }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-  </svg>
-);
 
 export default Home;

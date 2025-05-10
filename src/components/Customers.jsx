@@ -1,3 +1,4 @@
+// Customers.jsx
 import { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { 
@@ -11,23 +12,42 @@ import {
   Phone,
   DollarSign,
   ChevronDown,
-  Filter
+  Filter,
+  Activity,
+  CalendarDays,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
+import CustomerModal from './CustomerModal';
 
 const Customers = () => {
-  const { customers, loading, error, deleteCustomer } = useAppContext();
+  const { 
+    customers, 
+    loading, 
+    error, 
+    addCustomer, 
+    updateCustomer, 
+    deleteCustomer 
+  } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
-  
-  const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email.toLowerCase().includes(searchTerm.toLowerCase())
-  ).sort((a, b) => {
+  const [showModal, setShowModal] = useState(false);
+  const [currentCustomer, setCurrentCustomer] = useState(null);
+
+  const filteredCustomers = customers.filter(customer => {
+    const customerName = customer?.name?.toLowerCase() || '';
+    const customerEmail = customer?.email?.toLowerCase() || '';
+    const search = searchTerm.toLowerCase();
+    return customerName.includes(search) || customerEmail.includes(search);
+  }).sort((a, b) => {
+    const aValue = a[sortBy] || '';
+    const bValue = b[sortBy] || '';
+    
     if (sortOrder === 'asc') {
-      return a[sortBy] > b[sortBy] ? 1 : -1;
+      return aValue > bValue ? 1 : -1;
     } else {
-      return a[sortBy] < b[sortBy] ? 1 : -1;
+      return aValue < bValue ? 1 : -1;
     }
   });
 
@@ -38,6 +58,25 @@ const Customers = () => {
       setSortBy(field);
       setSortOrder('asc');
     }
+  };
+
+  const handleEdit = (customer) => {
+    setCurrentCustomer(customer);
+    setShowModal(true);
+  };
+
+  const handleAdd = () => {
+    setCurrentCustomer(null);
+    setShowModal(true);
+  };
+
+  const handleSubmit = async (customerData) => {
+    if (currentCustomer) {
+      await updateCustomer(currentCustomer._id, customerData);
+    } else {
+      await addCustomer(customerData);
+    }
+    setShowModal(false);
   };
 
   if (loading) return (
@@ -54,13 +93,23 @@ const Customers = () => {
 
   return (
     <div className="container mx-auto p-6">
+      <CustomerModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onSubmit={handleSubmit}
+        customer={currentCustomer}
+      />
+      
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center">
           <Users className="h-8 w-8 text-blue-600 mr-3" />
           <h1 className="text-3xl font-bold text-gray-800">Customers</h1>
         </div>
         
-        <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-md">
+        <button 
+          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-md"
+          onClick={handleAdd}
+        >
           <UserPlus className="h-5 w-5 mr-2" />
           Add Customer
         </button>
@@ -126,6 +175,15 @@ const Customers = () => {
                     <ChevronDown className={`h-4 w-4 ml-1 transform ${sortBy === 'totalSpend' && sortOrder === 'desc' ? 'rotate-180' : ''} ${sortBy === 'totalSpend' ? 'opacity-100' : 'opacity-0'}`} />
                   </div>
                 </th>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleSort('lastVisit')}
+                >
+                  <div className="flex items-center">
+                    Last Activity
+                    <ChevronDown className={`h-4 w-4 ml-1 transform ${sortBy === 'lastVisit' && sortOrder === 'desc' ? 'rotate-180' : ''} ${sortBy === 'lastVisit' ? 'opacity-100' : 'opacity-0'}`} />
+                  </div>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -135,18 +193,18 @@ const Customers = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium">
-                        {customer.name.charAt(0).toUpperCase()}
+                        {customer.name ? customer.name.charAt(0).toUpperCase() : '?'}
                       </div>
                       <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">{customer.name}</p>
-                        <p className="text-xs text-gray-500">Customer ID: #{customer._id.slice(-6)}</p>
+                        <p className="text-sm font-medium text-gray-900">{customer.name || 'Unknown'}</p>
+                        <p className="text-xs text-gray-500">Customer ID: #{customer._id ? customer._id.slice(-6) : 'N/A'}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center text-sm text-gray-500">
                       <Mail className="h-4 w-4 mr-2 text-gray-400" />
-                      {customer.email}
+                      {customer.email || 'N/A'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -158,12 +216,35 @@ const Customers = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center text-sm font-medium">
                       <DollarSign className="h-4 w-4 mr-1 text-green-500" />
-                      {customer.totalSpend.toFixed(2)}
+                      {customer.totalSpend ? customer.totalSpend.toFixed(2) : '0.00'}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {customer.lastVisit ? (
+                      <div className="flex items-center text-sm text-gray-500">
+                        <CalendarDays className="h-4 w-4 mr-2 text-gray-400" />
+                        {new Date(customer.lastVisit).toLocaleDateString()}
+                        <span className={`ml-2 flex items-center text-xs ${
+                          new Date(customer.lastVisit) > new Date(Date.now() - 30*24*60*60*1000) 
+                            ? 'text-green-600' 
+                            : 'text-red-600'
+                        }`}>
+                          {new Date(customer.lastVisit) > new Date(Date.now() - 30*24*60*60*1000) 
+                            ? <ArrowUp className="h-3 w-3 mr-1" /> 
+                            : <ArrowDown className="h-3 w-3 mr-1" />}
+                          {Math.floor((Date.now() - new Date(customer.lastVisit).getTime()) / (24*60*60*1000))}d
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-500">No data</div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <div className="flex items-center space-x-3">
-                      <button className="p-1 rounded-md text-blue-600 hover:bg-blue-50 transition-colors">
+                      <button 
+                        className="p-1 rounded-md text-blue-600 hover:bg-blue-50 transition-colors"
+                        onClick={() => handleEdit(customer)}
+                      >
                         <Edit className="h-5 w-5" />
                       </button>
                       <button

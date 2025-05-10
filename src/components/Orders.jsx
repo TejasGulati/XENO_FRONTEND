@@ -14,27 +14,43 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  AlertTriangle
+  AlertTriangle,
+  Plus,
+  Edit,
+  Trash2
 } from 'lucide-react';
+import OrderModal from './OrderModal';
 
 const Orders = () => {
-  const { orders, loading, error } = useAppContext();
+  const { 
+    orders, 
+    customers, 
+    loading, 
+    error,
+    addOrder,
+    updateOrder,
+    deleteOrder,
+    fetchAllData
+  } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('orderDate');
   const [sortOrder, setSortOrder] = useState('desc');
+  const [showModal, setShowModal] = useState(false);
+  const [currentOrder, setCurrentOrder] = useState(null);
   
-  // Filter orders based on search and status
   const filteredOrders = orders.filter(order => {
-    const matchesSearch = order._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (order.customer?.name && order.customer.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const orderId = order?._id?.toLowerCase() || '';
+    const customerName = order?.customer?.name?.toLowerCase() || '';
+    const searchTermLower = searchTerm.toLowerCase();
     
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+    const matchesSearch = orderId.includes(searchTermLower) || customerName.includes(searchTermLower);
+    const matchesStatus = statusFilter === 'all' || order?.status === statusFilter;
     
     return matchesSearch && matchesStatus;
   }).sort((a, b) => {
-    const aValue = a[sortBy];
-    const bValue = b[sortBy];
+    const aValue = a[sortBy] || '';
+    const bValue = b[sortBy] || '';
     
     if (sortOrder === 'asc') {
       return aValue > bValue ? 1 : -1;
@@ -43,12 +59,11 @@ const Orders = () => {
     }
   });
   
-  // Get order count by status
   const orderCounts = {
-    all: orders.length,
-    completed: orders.filter(order => order.status === 'completed').length,
-    pending: orders.filter(order => order.status === 'pending').length,
-    cancelled: orders.filter(order => order.status === 'cancelled').length
+    all: orders?.length || 0,
+    completed: orders?.filter(order => order?.status === 'completed')?.length || 0,
+    pending: orders?.filter(order => order?.status === 'pending')?.length || 0,
+    cancelled: orders?.filter(order => order?.status === 'cancelled')?.length || 0
   };
 
   const handleSort = (field) => {
@@ -57,6 +72,39 @@ const Orders = () => {
     } else {
       setSortBy(field);
       setSortOrder('asc');
+    }
+  };
+
+  const handleEdit = (order) => {
+    setCurrentOrder(order);
+    setShowModal(true);
+  };
+
+  const handleAdd = () => {
+    setCurrentOrder(null);
+    setShowModal(true);
+  };
+
+  const handleSubmit = async (orderData) => {
+    try {
+      if (currentOrder) {
+        await updateOrder(currentOrder._id, orderData);
+      } else {
+        await addOrder(orderData);
+      }
+      setShowModal(false);
+      fetchAllData(); // Refresh data to ensure sync with backend
+    } catch (error) {
+      console.error('Error submitting order:', error);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await deleteOrder(id);
+      fetchAllData(); // Refresh data after deletion
+    } catch (error) {
+      console.error('Error deleting order:', error);
     }
   };
 
@@ -77,19 +125,35 @@ const Orders = () => {
 
   return (
     <div className="container mx-auto p-6">
+      <OrderModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onSubmit={handleSubmit}
+        order={currentOrder}
+        customers={customers}
+      />
+      
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center">
           <ShoppingBag className="h-8 w-8 text-blue-600 mr-3" />
           <h1 className="text-3xl font-bold text-gray-800">Orders</h1>
         </div>
         
-        <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-md">
-          <Download className="h-5 w-5 mr-2" />
-          Export
-        </button>
+        <div className="flex space-x-3">
+          <button 
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-md"
+            onClick={handleAdd}
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            New Order
+          </button>
+          <button className="flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors">
+            <Download className="h-5 w-5 mr-2" />
+            Export
+          </button>
+        </div>
       </div>
       
-      {/* Status Tabs */}
       <div className="bg-white p-4 rounded-lg shadow-md mb-6">
         <div className="flex flex-wrap gap-4">
           <StatusTab 
@@ -122,7 +186,6 @@ const Orders = () => {
         </div>
       </div>
       
-      {/* Search and Filters */}
       <div className="bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden mb-6">
         <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="relative flex-grow max-w-md">
@@ -160,7 +223,6 @@ const Orders = () => {
           </div>
         </div>
         
-        {/* Orders Table */}
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -198,6 +260,9 @@ const Orders = () => {
                     <ChevronDown className={`h-4 w-4 ml-1 transform ${sortBy === 'orderDate' && sortOrder === 'desc' ? 'rotate-180' : ''} ${sortBy === 'orderDate' ? 'opacity-100' : 'opacity-0'}`} />
                   </div>
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -209,7 +274,7 @@ const Orders = () => {
                         <div className="bg-blue-100 p-1.5 rounded-md mr-3">
                           <ShoppingBag className="h-4 w-4 text-blue-600" />
                         </div>
-                        <span className="font-medium text-gray-900">#{order._id.slice(-6)}</span>
+                        <span className="font-medium text-gray-900">#{order._id ? order._id.slice(-6) : 'N/A'}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -226,7 +291,7 @@ const Orders = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center text-sm font-medium">
                         <DollarSign className="h-4 w-4 mr-1 text-green-500" />
-                        {order.orderAmount.toFixed(2)}
+                        {order.orderAmount ? order.orderAmount.toFixed(2) : '0.00'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -237,20 +302,36 @@ const Orders = () => {
                         {order.status === 'completed' && <CheckCircle className="h-3 w-3 mr-1" />}
                         {order.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
                         {order.status === 'cancelled' && <XCircle className="h-3 w-3 mr-1" />}
-                        {order.status}
+                        {order.status || 'Unknown'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center text-sm text-gray-500">
                         <Calendar className="h-4 w-4 mr-1 text-gray-400" />
-                        {new Date(order.orderDate).toLocaleDateString()}
+                        {order.orderDate ? new Date(order.orderDate).toLocaleDateString() : 'Unknown date'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex items-center space-x-2">
+                        <button 
+                          className="p-1 rounded-md text-blue-600 hover:bg-blue-50 transition-colors"
+                          onClick={() => handleEdit(order)}
+                        >
+                          <Edit className="h-5 w-5" />
+                        </button>
+                        <button
+                          className="p-1 rounded-md text-red-600 hover:bg-red-50 transition-colors"
+                          onClick={() => handleDelete(order._id)}
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
                       </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center">
+                  <td colSpan="6" className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center">
                       <AlertTriangle className="h-12 w-12 text-gray-400 mb-4" />
                       <p className="text-gray-500 text-lg">No orders found matching your criteria</p>
@@ -263,10 +344,9 @@ const Orders = () => {
           </table>
         </div>
         
-        {/* Pagination */}
         <div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t border-gray-200">
           <div className="text-sm text-gray-500">
-            Showing <span className="font-medium">{filteredOrders.length}</span> of <span className="font-medium">{orders.length}</span> orders
+            Showing <span className="font-medium">{filteredOrders.length}</span> of <span className="font-medium">{orders.length || 0}</span> orders
           </div>
           <div className="flex items-center space-x-2">
             <button className="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 transition-colors flex items-center">
@@ -284,7 +364,6 @@ const Orders = () => {
   );
 };
 
-// Status Tab Component
 const StatusTab = ({ label, count, active, onClick, icon }) => (
   <button
     onClick={onClick}
