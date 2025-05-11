@@ -76,7 +76,7 @@ Xeno CRM is a comprehensive Customer Relationship Management system designed to 
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-repo/xeno-crm.git
+   git clone https://github.com/TejasGulati/XENO_FRONTEND
    cd xeno-crm
    ```
 
@@ -104,30 +104,41 @@ Xeno CRM is a comprehensive Customer Relationship Management system designed to 
 
 ## Project Structure
 
-```
-xeno-crm/
+```XENO_CRM_FRONTEND/
+├── node_modules/
+├── public/
+│   └── vite.svg
 ├── src/
-│   ├── components/               # React components
-│   │   ├── CampaignLogsModal.jsx # Campaign logs modal
-│   │   ├── Campaigns.jsx         # Campaigns management
-│   │   ├── CreateCampaignModal.jsx # Campaign creation
-│   │   ├── CustomerModal.jsx     # Customer management modal
-│   │   ├── Customers.jsx         # Customers management
-│   │   ├── Home.jsx              # Dashboard
-│   │   ├── Navbar.jsx            # Navigation bar
-│   │   ├── NotFound.jsx          # 404 page
-│   │   ├── OrderModal.jsx        # Order management modal
-│   │   └── Orders.jsx            # Orders management
-│   ├── context/                  # Application context
-│   │   ├── AppContext.jsx        # Global state management
-│   │   └── api.js                # API service layer
-│   ├── App.jsx                   # Main application component
-│   └── main.jsx                  # Application entry point
-├── public/                       # Static assets
-├── .gitignore                    # Git ignore rules
-├── package.json                  # Project dependencies
-├── README.md                     # Project documentation
-└── vite.config.js                # Vite configuration
+│   ├── assets/
+│   │   └── react.svg
+│   ├── components/
+│   │   ├── CampaignLogsModal.jsx
+│   │   ├── Campaigns.jsx
+│   │   ├── CreateCampaignModal.jsx
+│   │   ├── CustomerModal.jsx
+│   │   ├── Customers.jsx
+│   │   ├── Home.jsx
+│   │   ├── Navbar.jsx
+│   │   ├── NotFound.jsx
+│   │   ├── OrderModal.jsx
+│   │   └── Orders.jsx
+│   ├── context/
+│   │   └── AppContext.jsx
+│   ├── api.js
+│   ├── App.jsx
+│   ├── index.css
+│   └── main.jsx
+├── .env
+├── .gitignore
+├── eslint.config.js
+├── index.html
+├── package-lock.json
+├── package.json
+├── postcss.config.cjs
+├── README.md
+├── tailwind.config.cjs
+└── vite.config.js
+
 ```
 
 ## Usage Guide
@@ -162,17 +173,3 @@ Contributions are welcome! Please follow these steps:
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin feature/your-feature`)
 5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Contact
-
-For questions or support, please contact:
-- Email: support@xenocrm.com
-- Website: [www.xenocrm.com](https://www.xenocrm.com)
-
----
-
-**Xeno CRM** - Transforming customer relationships with intelligent automation and powerful analytics.
