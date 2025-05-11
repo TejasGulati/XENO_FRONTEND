@@ -38,7 +38,7 @@ const Home = () => {
     <div className="bg-gray-50 min-h-screen pb-12">
       <SignedOut>
         <div className="container mx-auto px-4 py-12">
-          <div className="max-w-4xl mx-auto text-center mb-12">
+          <div className="w-full mx-auto text-center mb-12">
             <div className="flex justify-center mb-6">
               <div className="h-20 w-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-3xl">X</span>
@@ -47,18 +47,16 @@ const Home = () => {
             <h1 className="text-4xl font-bold text-gray-800 mb-4">
               Welcome to <span className="text-blue-600">Xeno CRM</span>
             </h1>
-            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-600 mb-8 w-full mx-auto">
               The all-in-one customer relationship management platform designed to streamline your business operations and boost customer engagement.
             </p>
             
-            {/* Auth component for sign-in/sign-up */}
             <div className="flex justify-center mb-12">
               <Auth />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            {/* Feature Cards */}
+          <div className="grid grid-cols-3 gap-8 mb-12">
             <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
               <div className="bg-blue-50 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
                 <Users className="h-6 w-6 text-blue-600" />
@@ -123,9 +121,9 @@ const Home = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 max-w-4xl mx-auto">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 w-full mx-auto">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Why Choose Xeno CRM?</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-6">
               <div className="flex items-start">
                 <div className="bg-blue-100 p-2 rounded-lg mr-4">
                   <Sparkles className="h-5 w-5 text-blue-600" />
@@ -176,9 +174,7 @@ const Home = () => {
       </SignedOut>
 
       <SignedIn>
-        {/* Dashboard content for signed in users */}
         {(() => {
-          // Calculate stats only when signed in
           const totalRevenue = orders
             .filter(order => order.status === 'completed')
             .reduce((sum, order) => sum + order.orderAmount, 0);
@@ -205,12 +201,11 @@ const Home = () => {
           const highValueCustomers = customers.filter(c => c.totalSpend > 1000).length;
 
           return (
-            <div className="container mx-auto px-4 sm:px-6 py-8">
-              {/* Header */}
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+            <div className="container mx-auto px-4 py-8">
+              <div className="flex items-center justify-between gap-4 mb-8">
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-1">Dashboard Overview</h1>
-                  <p className="text-gray-500 text-sm md:text-base">
+                  <h1 className="text-3xl font-bold text-gray-800 mb-1">Dashboard Overview</h1>
+                  <p className="text-gray-500">
                     Welcome back! Here's what's happening with your business today.
                   </p>
                 </div>
@@ -225,8 +220,7 @@ const Home = () => {
                 </div>
               </div>
               
-              {/* Stats Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <div className="grid grid-cols-4 gap-4 mb-8">
                 <StatCard 
                   icon={<Users className="h-5 w-5" />}
                   title="Total Customers"
@@ -264,10 +258,8 @@ const Home = () => {
                 />
               </div>
               
-              {/* Main Content */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                {/* Recent Orders */}
-                <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="grid grid-cols-3 gap-6 mb-8">
+                <div className="col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                   <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
                     <div className="flex items-center justify-between">
                       <div>
@@ -325,7 +317,6 @@ const Home = () => {
                   </div>
                 </div>
                 
-                {/* Order Summary */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                   <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
                     <h2 className="text-lg font-semibold text-gray-800">Order Summary</h2>
@@ -388,9 +379,7 @@ const Home = () => {
                 </div>
               </div>
               
-              {/* Second Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Campaign Performance */}
+              <div className="grid grid-cols-3 gap-6">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                   <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
                     <div className="flex items-center justify-between">
@@ -471,7 +460,6 @@ const Home = () => {
                   </div>
                 </div>
                 
-                {/* Customer Segments */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                   <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
                     <div className="flex items-center justify-between">
@@ -517,7 +505,6 @@ const Home = () => {
                   </div>
                 </div>
                 
-                {/* Quick Actions */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                   <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
                     <h2 className="text-lg font-semibold text-gray-800">Quick Actions</h2>
@@ -569,7 +556,6 @@ const Home = () => {
   );
 };
 
-// Reusable Stat Card Component
 const StatCard = ({ icon, title, value, change, link, color }) => {
   const colorClasses = {
     blue: 'from-blue-50 to-indigo-50 border-blue-100 text-blue-600',
@@ -601,7 +587,6 @@ const StatCard = ({ icon, title, value, change, link, color }) => {
   );
 };
 
-// Reusable Mini Stat Card
 const StatMiniCard = ({ count, label, icon, color }) => {
   const colorClasses = {
     green: 'bg-green-50 text-green-600',
@@ -625,7 +610,6 @@ const StatMiniCard = ({ count, label, icon, color }) => {
   );
 };
 
-// Reusable Status Badge
 const StatusBadge = ({ status }) => {
   const statusClasses = {
     completed: 'bg-green-100 text-green-800',
@@ -640,7 +624,6 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-// Segment Card Component
 const SegmentCard = ({ title, count, description, icon, color }) => {
   const colorClasses = {
     green: 'bg-green-50 text-green-600',
@@ -663,7 +646,6 @@ const SegmentCard = ({ title, count, description, icon, color }) => {
   );
 };
 
-// Quick Action Component
 const QuickAction = ({ icon, title, description, link, color }) => {
   const colorClasses = {
     purple: 'bg-purple-50 text-purple-600',

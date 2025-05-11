@@ -4,7 +4,7 @@ import { Home, AlertCircle, ArrowLeft, Mail } from 'lucide-react';
 const NotFound = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-center p-6">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+      <div className="w-full bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden" style={{ maxWidth: '500px' }}>
         <div className="p-8 text-center">
           <div className="flex justify-center mb-6">
             <div className="h-20 w-20 rounded-full bg-red-50 flex items-center justify-center shadow-inner">
@@ -19,7 +19,7 @@ const NotFound = () => {
             Please check the URL or navigate back to the home page.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="flex justify-center gap-3">
             <Link
               to="/"
               className="flex items-center justify-center px-5 py-2.5 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm font-medium"

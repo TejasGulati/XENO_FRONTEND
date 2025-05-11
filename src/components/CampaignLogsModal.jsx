@@ -79,15 +79,12 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
       Math.round((logs.filter(log => log.status === 'DELIVERED').length / logs.length) * 100) : 0
   };
 
-  // Add this function to handle CSV export for logs
   const exportLogsToCSV = () => {
-    // If no logs to export, show alert and return
     if (filteredLogs.length === 0) {
       alert('No logs to export');
       return;
     }
     
-    // CSV header row
     const headers = [
       'Customer Name',
       'Customer Email',
@@ -100,9 +97,7 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
       'ID'
     ];
     
-    // Format log data for CSV
     const csvData = filteredLogs.map(log => [
-      // Escape quotes in text fields to prevent CSV formatting issues
       `"${(log.customer?.name || 'N/A').replace(/"/g, '""')}"`,
       `"${(log.customer?.email || 'N/A').replace(/"/g, '""')}"`,
       log.status,
@@ -114,33 +109,22 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
       log._id
     ]);
     
-    // Add header row to the beginning
     const allRows = [headers, ...csvData];
-    
-    // Convert to CSV format
     const csvContent = allRows.map(row => row.join(',')).join('\n');
-    
-    // Create a blob with the CSV data
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    
-    // Create a link element and trigger download
     const link = document.createElement('a');
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = campaign 
       ? `campaign-logs-${campaign.name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${timestamp}.csv`
       : `all-communication-logs-${timestamp}.csv`;
     
-    // Set link properties
     link.setAttribute('href', url);
     link.setAttribute('download', filename);
     link.style.display = 'none';
-    
-    // Add to document, trigger download and cleanup
     document.body.appendChild(link);
     link.click();
     
-    // Cleanup
     setTimeout(() => {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
@@ -151,7 +135,7 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-200">
+      <div className="bg-white rounded-xl shadow-2xl w-full min-w-[1200px] max-w-[90vw] max-h-[90vh] flex flex-col overflow-hidden border border-gray-200">
         {/* Header */}
         <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
           <div className="flex items-center justify-between mb-4">
@@ -173,7 +157,7 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
           </div>
           
           {/* Filters */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center justify-between gap-4">
             <div className="relative flex-grow max-w-md">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search className="h-4 w-4 text-gray-400" />
@@ -187,7 +171,7 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
               />
             </div>
             
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Calendar className="h-4 w-4 text-gray-400" />
@@ -292,7 +276,7 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
               </h3>
               
               {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+              <div className="grid grid-cols-4 gap-6 mb-6">
                 <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-medium text-gray-500">Total Messages</h4>
@@ -399,7 +383,7 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
               </div>
               
               {/* Charts */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-6">
                 <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                   <h4 className="text-xs font-medium text-gray-500 mb-3">Delivery Timeline</h4>
                   <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400">
@@ -536,7 +520,7 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
                                 </div>
                               </div>
                               
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="grid grid-cols-2 gap-4">
                                 <div>
                                   <h5 className="text-xs font-medium text-gray-500 mb-2">Delivery Details</h5>
                                   <div className="space-y-2 text-sm">

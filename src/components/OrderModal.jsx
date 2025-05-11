@@ -190,7 +190,7 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order, customers }) => {
                 {errors.customer && <p className="mt-1 text-sm text-red-600">{errors.customer}</p>}
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Order Date</label>
                   <div className="relative">
@@ -261,7 +261,7 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order, customers }) => {
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">Name</label>
                       <input

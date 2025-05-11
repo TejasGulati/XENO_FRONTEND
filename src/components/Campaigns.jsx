@@ -165,72 +165,56 @@ const Campaigns = () => {
     }
   };
 
-  // Add this function to handle CSV export in the Campaigns component
-const exportCampaignsToCSV = () => {
-  // If no campaigns to export, show alert and return
-  if (filteredCampaigns.length === 0) {
-    alert('No campaigns to export');
-    return;
-  }
-  
-  // CSV header row
-  const headers = [
-    'Campaign Name',
-    'Description',
-    'Audience Size',
-    'Sent',
-    'Status',
-    'Created Date',
-    'ID'
-  ];
-  
-  // Format campaign data for CSV
-  const csvData = filteredCampaigns.map(campaign => [
-    // Escape quotes in text fields to prevent CSV formatting issues
-    `"${campaign.name.replace(/"/g, '""')}"`, 
-    `"${(campaign.description || 'No description').replace(/"/g, '""')}"`,
-    campaign.audienceSize,
-    campaign.sent,
-    campaign.status,
-    new Date(campaign.createdAt).toLocaleDateString(),
-    campaign._id
-  ]);
-  
-  // Add header row to the beginning
-  const allRows = [headers, ...csvData];
-  
-  // Convert to CSV format
-  const csvContent = allRows.map(row => row.join(',')).join('\n');
-  
-  // Create a blob with the CSV data
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  
-  // Create a link element and trigger download
-  const link = document.createElement('a');
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const filename = `campaigns-export-${timestamp}.csv`;
-  
-  // Set link properties
-  link.setAttribute('href', url);
-  link.setAttribute('download', filename);
-  link.style.display = 'none';
-  
-  // Add to document, trigger download and cleanup
-  document.body.appendChild(link);
-  link.click();
-  
-  // Cleanup
-  setTimeout(() => {
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, 100);
-};
+  const exportCampaignsToCSV = () => {
+    if (filteredCampaigns.length === 0) {
+      alert('No campaigns to export');
+      return;
+    }
+    
+    const headers = [
+      'Campaign Name',
+      'Description',
+      'Audience Size',
+      'Sent',
+      'Status',
+      'Created Date',
+      'ID'
+    ];
+    
+    const csvData = filteredCampaigns.map(campaign => [
+      `"${campaign.name.replace(/"/g, '""')}"`, 
+      `"${(campaign.description || 'No description').replace(/"/g, '""')}"`,
+      campaign.audienceSize,
+      campaign.sent,
+      campaign.status,
+      new Date(campaign.createdAt).toLocaleDateString(),
+      campaign._id
+    ]);
+    
+    const allRows = [headers, ...csvData];
+    const csvContent = allRows.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `campaigns-export-${timestamp}.csv`;
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
+  };
 
   const handleCreateCampaign = async (campaignData) => {
     try {
       await addCampaign(campaignData);
-      fetchAllData(); // Refresh all data after campaign creation
+      fetchAllData();
       setShowCreateModal(false);
     } catch (err) {
       console.error('Error creating campaign:', err);
@@ -274,7 +258,6 @@ const exportCampaignsToCSV = () => {
         loading={logsLoading}
       />
       
-      {/* AI Content Modal */}
       {aiContent && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] overflow-hidden border border-gray-200">
@@ -392,7 +375,7 @@ const exportCampaignsToCSV = () => {
         </div>
       )}
       
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+      <div className="flex items-center justify-between mb-8">
         <div className="flex items-center">
           <div className="bg-gradient-to-br from-blue-100 to-indigo-100 p-2 rounded-xl mr-3">
             <Megaphone className="h-8 w-8 text-blue-600" />
@@ -403,7 +386,7 @@ const exportCampaignsToCSV = () => {
           </div>
         </div>
         
-        <div className="flex flex-wrap gap-3">
+        <div className="flex gap-3">
           <button 
             className="flex items-center px-4 py-2 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md font-medium"
             onClick={() => setShowCreateModal(true)}
@@ -436,8 +419,8 @@ const exportCampaignsToCSV = () => {
       
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden mb-6">
         <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="relative flex-grow max-w-md">
+          <div className="flex items-center justify-between">
+            <div className="relative w-1/3">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search className="h-5 w-5 text-gray-400" />
               </div>
@@ -450,7 +433,7 @@ const exportCampaignsToCSV = () => {
               />
             </div>
             
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2">
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Calendar className="h-4 w-4 text-gray-400" />
@@ -487,12 +470,12 @@ const exportCampaignsToCSV = () => {
               </div>
               
               <button 
-  className="px-3 py-2 bg-white border border-gray-300 rounded-lg flex items-center text-gray-600 hover:bg-gray-50 transition-colors"
-  onClick={exportCampaignsToCSV}
->
-  <Download className="h-4 w-4 mr-1" />
-  Export
-</button>
+                className="px-3 py-2 bg-white border border-gray-300 rounded-lg flex items-center text-gray-600 hover:bg-gray-50 transition-colors"
+                onClick={exportCampaignsToCSV}
+              >
+                <Download className="h-4 w-4 mr-1" />
+                Export
+              </button>
             </div>
           </div>
         </div>
@@ -662,8 +645,8 @@ const exportCampaignsToCSV = () => {
         </div>
         
         {currentCampaigns.length > 0 && (
-          <div className="bg-gray-50 px-6 py-3 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200">
-            <div className="text-sm text-gray-500 mb-2 sm:mb-0">
+          <div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t border-gray-200">
+            <div className="text-sm text-gray-500">
               Showing <span className="font-medium">{indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredCampaigns.length)}</span> of <span className="font-medium">{filteredCampaigns.length}</span> campaigns
             </div>
             <div className="flex items-center space-x-2">

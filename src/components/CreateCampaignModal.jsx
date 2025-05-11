@@ -70,7 +70,7 @@ const RuleItem = ({ rule, index, updateRule, removeRule, moveRule }) => {
         )}
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">Field</label>
           <select
@@ -347,7 +347,7 @@ const CreateCampaignModal = ({ isOpen, onClose, onCreate, previewAudience, gener
           
           <form onSubmit={handleSubmit}>
             {activeTab === 'details' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className="grid grid-cols-2 gap-6 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Campaign Name</label>
                   <input
@@ -375,7 +375,7 @@ const CreateCampaignModal = ({ isOpen, onClose, onCreate, previewAudience, gener
                   </select>
                 </div>
                 
-                <div className="md:col-span-2">
+                <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                   <textarea
                     name="description"
@@ -387,7 +387,7 @@ const CreateCampaignModal = ({ isOpen, onClose, onCreate, previewAudience, gener
                   />
                 </div>
                 
-                <div className="md:col-span-2">
+                <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Objective</label>
                   <input
                     type="text"
@@ -399,7 +399,7 @@ const CreateCampaignModal = ({ isOpen, onClose, onCreate, previewAudience, gener
                   />
                 </div>
                 
-                <div className="md:col-span-2">
+                <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
                   <div className="flex flex-col space-y-2">
                     <div className="flex items-center gap-2">

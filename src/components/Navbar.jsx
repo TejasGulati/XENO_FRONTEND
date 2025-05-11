@@ -58,7 +58,6 @@ const Navbar = () => {
   );
 };
 
-// NavItem component remains the same
 const NavItem = ({ to, icon, text, isActive }) => (
   <Link
     to={to}
