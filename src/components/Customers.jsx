@@ -1,3 +1,4 @@
+// src/components/Customers.jsx
 import { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { 
@@ -5,28 +6,26 @@ import {
   Search, 
   Edit, 
   Trash2, 
-  PlusCircle, 
-  UserPlus,
+  Plus,
+  ChevronDown,
+  ChevronLeft,
+  Activity,
+  ChevronRight,
   User,
   Mail,
   Phone,
   DollarSign,
-  ChevronDown,
-  Filter,
-  Activity,
   CalendarDays,
-  ArrowUp,
-  ArrowDown,
-  X,
-  Plus,
   RefreshCw,
   ArrowUpDown,
   Sliders,
   Download,
-  PieChart,
-  BarChart2,
-  ChevronLeft,
-  ChevronRight
+  XCircle,
+  CheckCircle,
+  Clock,
+  X,
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 import CustomerModal from './CustomerModal';
 
@@ -50,23 +49,30 @@ const Customers = () => {
   const [dateFilter, setDateFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [submitting, setSubmitting] = useState(false);
+  const [pendingCustomers, setPendingCustomers] = useState([]);
   const [exportLoading, setExportLoading] = useState(false);
 
-  const filteredCustomers = customers.filter(customer => {
-    const matchesSearch = customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || 
-      (statusFilter === 'active' && customer.lastVisit && new Date(customer.lastVisit) > new Date(Date.now() - 30*24*60*60*1000)) ||
-      (statusFilter === 'inactive' && (!customer.lastVisit || new Date(customer.lastVisit) <= new Date(Date.now() - 30*24*60*60*1000)));
-    
-    const matchesDate = dateFilter === 'all' || 
-      (dateFilter === 'today' && customer.lastVisit && new Date(customer.lastVisit).toDateString() === new Date().toDateString()) ||
-      (dateFilter === 'week' && customer.lastVisit && (new Date() - new Date(customer.lastVisit)) < 7 * 24 * 60 * 60 * 1000) ||
-      (dateFilter === 'month' && customer.lastVisit && (new Date() - new Date(customer.lastVisit)) < 30 * 24 * 60 * 60 * 1000);
-    
-    return matchesSearch && matchesStatus && matchesDate;
-  }).sort((a, b) => {
+  const filteredCustomers = [
+    ...pendingCustomers,
+    ...customers.filter(customer => {
+      if (customer._isDeleted) return false;
+      
+      const matchesSearch = customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = statusFilter === 'all' || 
+        (statusFilter === 'active' && customer.lastVisit && new Date(customer.lastVisit) > new Date(Date.now() - 30*24*60*60*1000)) ||
+        (statusFilter === 'inactive' && (!customer.lastVisit || new Date(customer.lastVisit) <= new Date(Date.now() - 30*24*60*60*1000)));
+      
+      const matchesDate = dateFilter === 'all' || 
+        (dateFilter === 'today' && customer.lastVisit && new Date(customer.lastVisit).toDateString() === new Date().toDateString()) ||
+        (dateFilter === 'week' && customer.lastVisit && (new Date() - new Date(customer.lastVisit)) < 7 * 24 * 60 * 60 * 1000) ||
+        (dateFilter === 'month' && customer.lastVisit && (new Date() - new Date(customer.lastVisit)) < 30 * 24 * 60 * 60 * 1000);
+      
+      return matchesSearch && matchesStatus && matchesDate;
+    })
+  ].sort((a, b) => {
     const aValue = a[sortBy] || '';
     const bValue = b[sortBy] || '';
     
@@ -77,7 +83,6 @@ const Customers = () => {
     }
   });
 
-  // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentCustomers = filteredCustomers.slice(indexOfFirstItem, indexOfLastItem);
@@ -96,16 +101,19 @@ const Customers = () => {
   };
 
   useEffect(() => {
-    // Reset to first page when filters change
     setCurrentPage(1);
   }, [searchTerm, statusFilter, dateFilter]);
+
+  useEffect(() => {
+    setPendingCustomers([]);
+  }, [customers]);
 
   const handleSort = (field) => {
     if (sortBy === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
       setSortBy(field);
-      setSortOrder('desc');
+      setSortOrder('asc');
     }
   };
 
@@ -120,17 +128,61 @@ const Customers = () => {
   };
 
   const handleSubmit = async (customerData) => {
-    if (currentCustomer) {
-      await updateCustomer(currentCustomer._id, customerData);
-    } else {
-      await addCustomer(customerData);
+    try {
+      setSubmitting(true);
+      const tempId = `temp-${Date.now()}`;
+      const tempCustomer = { 
+        ...customerData,
+        _id: tempId,
+        createdAt: new Date().toISOString(),
+        lastVisit: customerData.lastVisit || new Date().toISOString()
+      };
+      
+      setPendingCustomers(prev => [...prev, tempCustomer]);
+      
+      if (currentCustomer) {
+        await updateCustomer(currentCustomer._id, customerData);
+      } else {
+        await addCustomer(customerData);
+      }
+      
+      await fetchAllData();
+      setShowModal(false);
+    } catch (error) {
+      console.error('Error submitting customer:', error);
+      setPendingCustomers(prev => prev.filter(c => c._id !== tempId));
+    } finally {
+      setSubmitting(false);
     }
-    setShowModal(false);
-    fetchAllData();
   };
 
-  const handleRefresh = () => {
-    fetchAllData();
+  const handleDelete = async (id) => {
+    try {
+      if (id.startsWith('temp-')) {
+        setPendingCustomers(prev => prev.filter(c => c._id !== id));
+        return;
+      }
+      
+      const customerToDelete = customers.find(c => c._id === id);
+      if (customerToDelete) {
+        setPendingCustomers(prev => [...prev, {...customerToDelete, _isDeleted: true}]);
+      }
+      
+      await deleteCustomer(id);
+      await fetchAllData();
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      setPendingCustomers(prev => prev.filter(c => c._id !== id || !c._isDeleted));
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      await fetchAllData();
+      setPendingCustomers([]);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    }
   };
 
   const exportCustomersToCSV = async () => {
@@ -154,6 +206,8 @@ const Customers = () => {
       ];
       
       const csvData = filteredCustomers.map(customer => {
+        if (customer._isDeleted) return null;
+        
         const name = customer.name ? customer.name.replace(/"/g, '""') : 'Unknown';
         const email = customer.email ? customer.email.replace(/"/g, '""') : 'N/A';
         const phone = customer.phone ? customer.phone.replace(/"/g, '""') : 'N/A';
@@ -176,11 +230,11 @@ const Customers = () => {
           lastVisitDate,
           status,
           `"${customer._id}"`
-        ];
-      });
+        ].join(',');
+      }).filter(row => row !== null);
       
-      const allRows = [headers, ...csvData];
-      const csvContent = allRows.map(row => row.join(',')).join('\r\n');
+      const allRows = [headers.join(','), ...csvData];
+      const csvContent = allRows.join('\r\n');
       const BOM = '\uFEFF';
       const csvContentWithBOM = BOM + csvContent;
       
@@ -198,9 +252,9 @@ const Customers = () => {
       link.style.display = 'none';
       
       document.body.appendChild(link);
+      link.click();
       
       setTimeout(() => {
-        link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
         setExportLoading(false);
@@ -216,13 +270,14 @@ const Customers = () => {
   if (loading) return (
     <div className="flex justify-center items-center h-64">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <span className="ml-3 text-gray-700">Loading customers...</span>
     </div>
   );
   
   if (error) return (
     <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
       <div className="flex items-center">
-        <X className="h-6 w-6 text-red-500 mr-3" />
+        <XCircle className="h-6 w-6 text-red-500 mr-3" />
         <p className="text-red-800">Error: {error}</p>
       </div>
     </div>
@@ -235,6 +290,7 @@ const Customers = () => {
         onClose={() => setShowModal(false)}
         onSubmit={handleSubmit}
         customer={currentCustomer}
+        isSubmitting={submitting}
       />
       
       <div className="flex items-center justify-between mb-8">
@@ -270,7 +326,7 @@ const Customers = () => {
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden mb-6">
         <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
           <div className="flex items-center justify-between gap-4">
-            <div className="relative w-96">
+            <div className="relative flex-grow max-w-md">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search className="h-5 w-5 text-gray-400" />
               </div>
@@ -324,7 +380,7 @@ const Customers = () => {
               >
                 {exportLoading ? (
                   <>
-                    <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                     Exporting...
                   </>
                 ) : (
@@ -339,7 +395,7 @@ const Customers = () => {
         </div>
         
         <div className="overflow-x-auto">
-          {currentCustomers.length > 0 ? (
+          {filteredCustomers.length > 0 ? (
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -402,74 +458,85 @@ const Customers = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {currentCustomers.map(customer => (
-                  <tr key={customer._id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="bg-blue-100 p-2 rounded-lg mr-3">
-                          <User className="h-5 w-5 text-blue-600" />
+                {currentCustomers.map(customer => {
+                  if (customer._isDeleted) return null;
+                  
+                  const isPending = customer._id && customer._id.startsWith('temp-');
+                  const displayId = customer._id ? customer._id.slice(-6) : 'N/A';
+                  
+                  return (
+                    <tr key={customer._id || Math.random()} className={`hover:bg-gray-50 transition-colors ${isPending ? 'bg-blue-50' : ''}`}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className={`${isPending ? 'bg-blue-200' : 'bg-blue-100'} p-2 rounded-lg mr-3`}>
+                            <User className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {isPending ? '(Saving...)' : customer.name || 'Unknown'}
+                            </p>
+                            <p className="text-xs text-gray-500">ID: #{displayId}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{customer.name || 'Unknown'}</p>
-                          <p className="text-xs text-gray-500">ID: #{customer._id.slice(-6)}</p>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <p className="text-sm text-gray-500">{customer.email || 'N/A'}</p>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <p className="text-sm text-gray-500">{customer.phone || 'N/A'}</p>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <span className="text-sm font-medium">
+                            ₹{customer.totalSpend ? customer.totalSpend.toLocaleString('en-IN') : '0'}
+                          </span>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <p className="text-sm text-gray-500">{customer.email || 'N/A'}</p>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <p className="text-sm text-gray-500">{customer.phone || 'N/A'}</p>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <span className="text-sm font-medium">
-                          ₹{customer.totalSpend ? customer.totalSpend.toLocaleString('en-IN') : '0'}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        {customer.lastVisit ? (
-                          <>
-                            <span className="text-sm text-gray-500 mr-2">
-                              {new Date(customer.lastVisit).toLocaleDateString()}
-                            </span>
-                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              new Date(customer.lastVisit) > new Date(Date.now() - 30*24*60*60*1000) 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {new Date(customer.lastVisit) > new Date(Date.now() - 30*24*60*60*1000) 
-                                ? 'Active' 
-                                : 'Inactive'}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-sm text-gray-400">No data</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex items-center space-x-2">
-                        <button 
-                          className="p-1 rounded-md text-blue-600 hover:bg-blue-50 transition-colors"
-                          onClick={() => handleEdit(customer)}
-                          title="Edit Customer"
-                        >
-                          <Edit className="h-5 w-5" />
-                        </button>
-                        <button 
-                          className="p-1 rounded-md text-red-600 hover:bg-red-50 transition-colors"
-                          onClick={() => deleteCustomer(customer._id)}
-                          title="Delete Customer"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          {customer.lastVisit ? (
+                            <>
+                              <span className="text-sm text-gray-500 mr-2">
+                                {new Date(customer.lastVisit).toLocaleDateString()}
+                              </span>
+                              <span className={`px-2 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full ${
+                                new Date(customer.lastVisit) > new Date(Date.now() - 30*24*60*60*1000) 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {isPending && <RefreshCw className="h-3 w-3 mr-1 animate-spin" />}
+                                {!isPending && new Date(customer.lastVisit) > new Date(Date.now() - 30*24*60*60*1000) 
+                                  ? 'Active' 
+                                  : 'Inactive'}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-sm text-gray-400">No data</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <div className="flex items-center space-x-2">
+                          <button 
+                            className={`p-1 rounded-md text-blue-600 hover:bg-blue-50 transition-colors ${isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            onClick={() => !isPending && handleEdit(customer)}
+                            title="Edit"
+                            disabled={isPending}
+                          >
+                            <Edit className="h-5 w-5" />
+                          </button>
+                          <button
+                            className="p-1 rounded-md text-red-600 hover:bg-red-50 transition-colors"
+                            onClick={() => customer._id && handleDelete(customer._id)}
+                            title="Delete"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           ) : (
@@ -490,7 +557,7 @@ const Customers = () => {
           )}
         </div>
         
-        {currentCustomers.length > 0 && (
+        {filteredCustomers.length > 0 && (
           <div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t border-gray-200">
             <div className="text-sm text-gray-500">
               Showing <span className="font-medium">{indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredCustomers.length)}</span> of <span className="font-medium">{filteredCustomers.length}</span> customers

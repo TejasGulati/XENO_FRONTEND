@@ -1,3 +1,4 @@
+// src/components/OrderModal.jsx - Complete Updated File
 import { useState, useEffect } from 'react';
 import {
   X,
@@ -10,34 +11,34 @@ import {
   Plus,
   Clock,
   ChevronDown,
-  Sparkles,
-  Lightbulb
+  Loader2
 } from 'lucide-react';
 
-const OrderModal = ({ isOpen, onClose, onSubmit, order, customers }) => {
+const OrderModal = ({ isOpen, onClose, onSubmit, order, customers, isSubmitting }) => {
   const [formData, setFormData] = useState({
     customer: '',
     orderAmount: 0,
     items: [{ name: '', price: 0, quantity: 1 }],
     status: 'pending',
-    orderDate: new Date()
+    orderDate: new Date().toISOString().slice(0, 16)
   });
   
   const [errors, setErrors] = useState({});
-  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     if (order) {
+      const customerId = order.customer?._id || order.customer || '';
       setFormData({
-        customer: order.customer?._id || order.customer || '',
-        orderAmount: order.orderAmount || 0,
-        items: order.items?.length ? order.items.map(item => ({
-          name: item.name || '',
-          price: item.price || 0,
-          quantity: item.quantity || 1
-        })) : [{ name: '', price: 0, quantity: 1 }],
-        status: order.status || 'pending',
-        orderDate: order.orderDate ? new Date(order.orderDate) : new Date()
+        ...order,
+        customer: customerId,
+        items: order.items?.length ? 
+          order.items.map(item => ({
+            name: item.name || '',
+            price: item.price || 0,
+            quantity: item.quantity || 1
+          })) : 
+          [{ name: '', price: 0, quantity: 1 }],
+        orderDate: order.orderDate ? new Date(order.orderDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)
       });
     } else {
       setFormData({
@@ -45,7 +46,7 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order, customers }) => {
         orderAmount: 0,
         items: [{ name: '', price: 0, quantity: 1 }],
         status: 'pending',
-        orderDate: new Date()
+        orderDate: new Date().toISOString().slice(0, 16)
       });
     }
     setErrors({});
@@ -129,14 +130,11 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order, customers }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (isSubmitting) return; // Prevent duplicate submissions
     if (validate()) {
       onSubmit({
         ...formData,
-        customer: formData.customer,
-        items: formData.items,
-        orderAmount: formData.orderAmount,
-        status: formData.status,
-        orderDate: formData.orderDate.toISOString()
+        orderDate: formData.orderDate || new Date().toISOString()
       });
     }
   };
@@ -158,11 +156,28 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order, customers }) => {
             </div>
             <button 
               onClick={onClose} 
-              className="text-gray-500 hover:text-gray-700 transition-colors p-1 rounded-full hover:bg-gray-100"
+              disabled={isSubmitting}
+              className="text-gray-500 hover:text-gray-700 transition-colors p-1 rounded-full hover:bg-gray-100 disabled:opacity-50"
             >
               <X className="h-6 w-6" />
             </button>
           </div>
+          
+          {Object.keys(errors).length > 0 && (
+            <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md mb-6">
+              <div className="flex items-center">
+                <XCircle className="h-6 w-6 text-red-500 mr-3" />
+                <div>
+                  <p className="text-red-800 font-medium">Please fix the following errors:</p>
+                  <ul className="list-disc list-inside text-red-700 mt-1">
+                    {Object.values(errors).map((error, i) => (
+                      <li key={i}>{error}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
           
           <form onSubmit={handleSubmit}>
             <div className="space-y-4 mb-6">
@@ -176,7 +191,8 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order, customers }) => {
                     name="customer"
                     value={formData.customer}
                     onChange={handleChange}
-                    className={`pl-10 w-full px-3 py-2 border ${errors.customer ? 'border-red-300' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                    disabled={isSubmitting}
+                    className={`pl-10 w-full px-3 py-2 border ${errors.customer ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50`}
                     required
                   >
                     <option value="">Select a customer</option>
@@ -187,7 +203,6 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order, customers }) => {
                     ))}
                   </select>
                 </div>
-                {errors.customer && <p className="mt-1 text-sm text-red-600">{errors.customer}</p>}
               </div>
               
               <div className="grid grid-cols-2 gap-4">
@@ -200,12 +215,13 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order, customers }) => {
                     <input
                       type="datetime-local"
                       name="orderDate"
-                      value={formData.orderDate ? new Date(formData.orderDate).toISOString().slice(0, 16) : ''}
+                      disabled={isSubmitting}
+                      value={formData.orderDate}
                       onChange={(e) => setFormData(prev => ({
                         ...prev,
-                        orderDate: new Date(e.target.value)
+                        orderDate: e.target.value
                       }))}
-                      className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                     />
                   </div>
                 </div>
@@ -222,7 +238,8 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order, customers }) => {
                       name="status"
                       value={formData.status}
                       onChange={handleChange}
-                      className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled={isSubmitting}
+                      className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                     >
                       <option value="pending">Pending</option>
                       <option value="completed">Completed</option>
@@ -239,7 +256,8 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order, customers }) => {
                 <button
                   type="button"
                   onClick={addItem}
-                  className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+                  disabled={isSubmitting}
+                  className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Add Item
@@ -254,7 +272,8 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order, customers }) => {
                       <button
                         type="button"
                         onClick={() => removeItem(index)}
-                        className="text-red-500 hover:text-red-700"
+                        disabled={isSubmitting}
+                        className="text-red-500 hover:text-red-700 disabled:opacity-50"
                       >
                         <X className="h-5 w-5" />
                       </button>
@@ -268,7 +287,8 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order, customers }) => {
                         type="text"
                         value={item.name}
                         onChange={(e) => handleItemChange(index, 'name', e.target.value)}
-                        className={`w-full px-3 py-2 border ${errors[`items[${index}].name`] ? 'border-red-300' : 'border-gray-300'} rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                        disabled={isSubmitting}
+                        className={`w-full px-3 py-2 border ${errors[`items[${index}].name`] ? 'border-red-300' : 'border-gray-300'} rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50`}
                         required
                       />
                       {errors[`items[${index}].name`] && <p className="mt-1 text-xs text-red-600">{errors[`items[${index}].name`]}</p>}
@@ -286,7 +306,8 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order, customers }) => {
                           step="0.01"
                           value={item.price}
                           onChange={(e) => handleItemChange(index, 'price', e.target.value)}
-                          className={`pl-8 w-full px-3 py-2 border ${errors[`items[${index}].price`] ? 'border-red-300' : 'border-gray-300'} rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                          disabled={isSubmitting}
+                          className={`pl-8 w-full px-3 py-2 border ${errors[`items[${index}].price`] ? 'border-red-300' : 'border-gray-300'} rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50`}
                           required
                         />
                       </div>
@@ -300,7 +321,8 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order, customers }) => {
                         min="1"
                         value={item.quantity}
                         onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                        className={`w-full px-3 py-2 border ${errors[`items[${index}].quantity`] ? 'border-red-300' : 'border-gray-300'} rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                        disabled={isSubmitting}
+                        className={`w-full px-3 py-2 border ${errors[`items[${index}].quantity`] ? 'border-red-300' : 'border-gray-300'} rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50`}
                         required
                       />
                       {errors[`items[${index}].quantity`] && <p className="mt-1 text-xs text-red-600">{errors[`items[${index}].quantity`]}</p>}
@@ -314,7 +336,7 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order, customers }) => {
               <div className="flex justify-between items-center">
                 <h4 className="font-medium text-blue-800">Order Summary</h4>
                 <div className="text-xl font-bold text-blue-600">
-                  ₹{formData.orderAmount.toFixed(2)}
+                  ₹{formData.orderAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
             </div>
@@ -323,15 +345,28 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order, customers }) => {
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                disabled={isSubmitting}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                disabled={isSubmitting}
+                className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors ${
+                  isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+                } flex items-center justify-center min-w-[120px]`}
               >
-                {order ? 'Update Order' : 'Create Order'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {order ? 'Updating...' : 'Creating...'}
+                  </>
+                ) : (
+                  <>
+                    {order ? 'Update Order' : 'Create Order'}
+                  </>
+                )}
               </button>
             </div>
           </form>

@@ -1,5 +1,6 @@
+// src/context/AppContext.js
 import { createContext, useContext, useState, useEffect } from 'react';
-import * as api from '../api';
+import * as api from '../api.js';
 
 const AppContext = createContext();
 
@@ -42,9 +43,7 @@ export const AppProvider = ({ children }) => {
   const addCustomer = async (customer) => {
     try {
       const res = await api.createCustomer(customer);
-      // Handle the 202 Accepted response from the backend
-      // The actual data will be added later when we refresh or reload
-      setCustomers(prev => [...prev, res.data.data]);
+      setCustomers(prev => [...prev, res.data]);
       return res.data;
     } catch (err) {
       throw err;
@@ -65,12 +64,7 @@ export const AppProvider = ({ children }) => {
     try {
       await api.deleteCustomer(id);
       setCustomers(prev => prev.filter(c => c._id !== id));
-      
-      // Also remove related logs from state
-      const customerLogs = communicationLogs.filter(log => log.customer?._id === id);
-      setCommunicationLogs(prev => prev.filter(log => 
-        !customerLogs.some(l => l._id === log._id)
-      ));
+      setCommunicationLogs(prev => prev.filter(log => log.customer?._id !== id));
     } catch (err) {
       throw err;
     }
@@ -79,23 +73,17 @@ export const AppProvider = ({ children }) => {
   // Order functions
   const addOrder = async (order) => {
     try {
-      const res = await api.createOrder(order);
-      // Handle the 202 Accepted response from the backend
-      // The actual data will be added later when we refresh or reload
-      setOrders(prev => [...prev, res.data.data]);
-      
-      // We don't need to update customer stats here as the backend will handle it through Redis
-      return res.data;
+      await api.createOrder(order);
+      // Don't update local state here - rely on fetchAllData
     } catch (err) {
       throw err;
     }
   };
-
+  
   const updateOrder = async (id, order) => {
     try {
-      const res = await api.updateOrder(id, order);
-      setOrders(prev => prev.map(o => o._id === id ? res.data : o));
-      return res.data;
+      await api.updateOrder(id, order);
+      // Don't update local state here - rely on fetchAllData
     } catch (err) {
       throw err;
     }
@@ -105,7 +93,6 @@ export const AppProvider = ({ children }) => {
     try {
       await api.deleteOrder(id);
       setOrders(prev => prev.filter(o => o._id !== id));
-      // The backend will handle updating customer stats
     } catch (err) {
       throw err;
     }
@@ -134,7 +121,6 @@ export const AppProvider = ({ children }) => {
   const updateDeliveryStatus = async (data) => {
     try {
       const res = await api.updateDeliveryReceipt(data);
-      // Update logs in state
       setCommunicationLogs(prev => prev.map(log => 
         log._id === data.communicationLogId ? { ...log, ...res.data } : log
       ));
@@ -167,21 +153,6 @@ export const AppProvider = ({ children }) => {
         case 'summary':
           result = await api.generateCampaignSummary(data);
           return result.data.summary;
-        case 'variants':
-          result = await api.generateMessageVariants(data);
-          return result.data.variants;
-        case 'performance':
-          result = await api.generatePerformanceSummary(data);
-          return result.data;
-        case 'optimal-time':
-          result = await api.getOptimalSendTime(data);
-          return result.data;
-        case 'lookalike':
-          result = await api.generateLookalikeAudience(data);
-          return result.data.rules;
-        case 'tags':
-          result = await api.autoTagCampaign(data);
-          return result.data.tags;
         default:
           throw new Error('Invalid AI content type');
       }

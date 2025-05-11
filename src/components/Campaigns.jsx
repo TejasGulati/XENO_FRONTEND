@@ -1,32 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { 
-  Megaphone, 
-  Users, 
-  CheckCircle, 
-  XCircle, 
-  Calendar, 
-  Search,
-  BarChart3,
-  Plus,
-  List,
-  Mail,
-  Filter,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  RefreshCw,
-  Sparkles,
-  Clock,
-  MessageSquare,
-  Tag,
-  Lightbulb,
-  X,
-  ArrowUpDown,
-  Sliders,
-  Download,
-  PieChart,
-  BarChart2
+  Megaphone, Users, CheckCircle, XCircle, Calendar, Search,
+  BarChart3, Plus, List, Mail, Filter, ChevronDown, ChevronLeft,
+  ChevronRight, RefreshCw, Sparkles, Clock, MessageSquare, Tag,
+  Lightbulb, X, ArrowUpDown, Sliders, Download, PieChart, BarChart2
 } from 'lucide-react';
 import CreateCampaignModal from './CreateCampaignModal';
 import CampaignLogsModal from './CampaignLogsModal';
@@ -46,7 +24,7 @@ const Campaigns = () => {
   
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showLogsModal, setShowLogsModal] = useState(false);
-  const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [selectedCampaignId, setSelectedCampaignId] = useState(null);
   const [campaignLogs, setCampaignLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -72,46 +50,31 @@ const Campaigns = () => {
     
     return matchesSearch && matchesStatus && matchesDate;
   }).sort((a, b) => {
-    const aValue = a[sortBy];
-    const bValue = b[sortBy];
-    
-    if (sortOrder === 'asc') {
-      return aValue > bValue ? 1 : -1;
-    } else {
-      return aValue < bValue ? 1 : -1;
+    if (sortBy === 'createdAt' || sortBy === 'scheduledDate') {
+      return sortOrder === 'asc' 
+        ? new Date(a[sortBy]) - new Date(b[sortBy])
+        : new Date(b[sortBy]) - new Date(a[sortBy]);
     }
+    return sortOrder === 'asc' 
+      ? a[sortBy] > b[sortBy] ? 1 : -1
+      : a[sortBy] < b[sortBy] ? 1 : -1;
   });
 
-  // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentCampaigns = filteredCampaigns.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredCampaigns.length / itemsPerPage);
 
-  const nextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  const prevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
+  const nextPage = () => currentPage < totalPages && setCurrentPage(currentPage + 1);
+  const prevPage = () => currentPage > 1 && setCurrentPage(currentPage - 1);
 
   useEffect(() => {
-    // Reset to first page when filters change
     setCurrentPage(1);
   }, [searchTerm, statusFilter, dateFilter]);
 
   const handleSort = (field) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(field);
-      setSortOrder('desc');
-    }
+    setSortBy(field);
+    setSortOrder(sortBy === field ? (sortOrder === 'asc' ? 'desc' : 'asc') : 'desc');
   };
 
   const viewCampaignLogs = async (campaignId) => {
@@ -119,7 +82,7 @@ const Campaigns = () => {
     try {
       const logs = await getCampaignLogs(campaignId);
       setCampaignLogs(logs);
-      setSelectedCampaign(campaigns.find(c => c._id === campaignId));
+      setSelectedCampaignId(campaignId);
       setShowLogsModal(true);
     } catch (err) {
       console.error('Error fetching logs:', err);
@@ -130,7 +93,14 @@ const Campaigns = () => {
 
   const generateAISummary = async (campaign) => {
     try {
-      const summary = await generateAIContent('summary', campaign);
+      const summary = await generateAIContent('summary', {
+        name: campaign.name,
+        audienceSize: campaign.audienceSize,
+        sent: campaign.sent,
+        failed: campaign.failed,
+        objective: campaign.objective,
+        description: campaign.description
+      });
       setAiContent(summary);
       setAiContentType('summary');
     } catch (err) {
@@ -138,30 +108,29 @@ const Campaigns = () => {
     }
   };
 
-  const getOptimalSendTime = async (campaign) => {
-    try {
-      const result = await generateAIContent('optimal-time', {
-        rules: campaign.segmentRules,
-        description: campaign.description
-      });
-      setAiContent(result);
-      setAiContentType('optimal-time');
-    } catch (err) {
-      console.error('Error getting optimal time:', err);
-    }
-  };
-
   const generateMessageVariants = async (campaign) => {
     try {
-      const variants = await generateAIContent('variants', {
-        objective: campaign.objective,
+      const message = await generateAIContent('message', {
+        campaignObjective: campaign.objective,
         audienceDescription: campaign.description,
         baseMessage: campaign.messageTemplate
       });
-      setAiContent(variants);
+      setAiContent(message);
       setAiContentType('variants');
     } catch (err) {
       console.error('Error generating variants:', err);
+    }
+  };
+
+  const generateSegmentRules = async (campaign) => {
+    try {
+      const rules = await generateAIContent('segment', {
+        naturalLanguage: campaign.description
+      });
+      setAiContent(rules);
+      setAiContentType('segment');
+    } catch (err) {
+      console.error('Error generating segment rules:', err);
     }
   };
 
@@ -172,58 +141,45 @@ const Campaigns = () => {
     }
     
     const headers = [
-      'Campaign Name',
-      'Description',
-      'Audience Size',
-      'Sent',
-      'Status',
-      'Created Date',
-      'ID'
+      'Name', 'Description', 'Status', 'Audience Size', 
+      'Sent', 'Failed', 'Created At', 'Scheduled Date', 'Use AI', 'ID'
     ];
     
     const csvData = filteredCampaigns.map(campaign => [
-      `"${campaign.name.replace(/"/g, '""')}"`, 
-      `"${(campaign.description || 'No description').replace(/"/g, '""')}"`,
+      `"${campaign.name.replace(/"/g, '""')}"`,
+      `"${(campaign.description || '').replace(/"/g, '""')}"`,
+      campaign.status,
       campaign.audienceSize,
       campaign.sent,
-      campaign.status,
-      new Date(campaign.createdAt).toLocaleDateString(),
+      campaign.failed,
+      new Date(campaign.createdAt).toISOString(),
+      campaign.scheduledDate ? new Date(campaign.scheduledDate).toISOString() : '',
+      campaign.useAIMessage ? 'TRUE' : 'FALSE',
       campaign._id
     ]);
     
-    const allRows = [headers, ...csvData];
-    const csvContent = allRows.map(row => row.join(',')).join('\n');
+    const csvContent = [headers, ...csvData].map(row => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `campaigns-export-${timestamp}.csv`;
-    
     link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.display = 'none';
+    link.setAttribute('download', `campaigns-export-${new Date().toISOString()}.csv`);
     document.body.appendChild(link);
     link.click();
-    
-    setTimeout(() => {
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }, 100);
+    document.body.removeChild(link);
   };
 
   const handleCreateCampaign = async (campaignData) => {
     try {
       await addCampaign(campaignData);
-      fetchAllData();
+      await fetchAllData();
       setShowCreateModal(false);
     } catch (err) {
       console.error('Error creating campaign:', err);
     }
   };
 
-  const handleRefresh = () => {
-    fetchAllData();
-  };
+  const handleRefresh = () => fetchAllData();
 
   if (loading) return (
     <div className="flex justify-center items-center h-64">
@@ -253,7 +209,7 @@ const Campaigns = () => {
       <CampaignLogsModal
         isOpen={showLogsModal}
         onClose={() => setShowLogsModal(false)}
-        campaign={selectedCampaign}
+        campaign={campaigns.find(c => c._id === selectedCampaignId)}
         logs={campaignLogs}
         loading={logsLoading}
       />
@@ -269,16 +225,16 @@ const Campaigns = () => {
                     AI Campaign Summary
                   </>
                 )}
-                {aiContentType === 'optimal-time' && (
-                  <>
-                    <Clock className="h-5 w-5 text-indigo-600 mr-2" />
-                    Optimal Send Times
-                  </>
-                )}
                 {aiContentType === 'variants' && (
                   <>
                     <MessageSquare className="h-5 w-5 text-teal-600 mr-2" />
-                    AI Message Variants
+                    AI Message Variant
+                  </>
+                )}
+                {aiContentType === 'segment' && (
+                  <>
+                    <Users className="h-5 w-5 text-indigo-600 mr-2" />
+                    AI Generated Segment Rules
                   </>
                 )}
               </h3>
@@ -300,62 +256,27 @@ const Campaigns = () => {
                 </div>
               )}
               
-              {aiContentType === 'optimal-time' && (
-                <div className="space-y-4">
-                  <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
-                    <h4 className="font-medium text-indigo-800 mb-2">Best Times to Send</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {aiContent.best_times.map((time, index) => (
-                        <span key={index} className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm flex items-center">
-                          <Clock className="h-3 w-3 mr-1" />
-                          {time}
-                        </span>
-                      ))}
+              {aiContentType === 'variants' && (
+                <div className="space-y-6">
+                  <div className="bg-teal-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-teal-800 mb-2">Generated Message Variant</h4>
+                    <div className="bg-white p-3 rounded border border-teal-100">
+                      <p className="text-gray-700 whitespace-pre-line">{aiContent}</p>
                     </div>
-                  </div>
-                  
-                  <div className="bg-red-50 p-4 rounded-lg border border-red-100">
-                    <h4 className="font-medium text-red-800 mb-2">Avoid Sending At</h4>
-                    <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm flex items-center">
-                      <X className="h-3 w-3 mr-1" />
-                      {aiContent.worst_time}
-                    </span>
-                  </div>
-                  
-                  <div className="mt-4 bg-white p-4 rounded-lg border border-gray-200">
-                    <h4 className="font-medium text-gray-700 mb-2">Rationale</h4>
-                    <p className="text-gray-600 whitespace-pre-line">{aiContent.rationale}</p>
                   </div>
                 </div>
               )}
               
-              {aiContentType === 'variants' && (
-                <div className="space-y-6">
-                  {aiContent.map((variant, i) => (
-                    <div key={i} className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-sm transition-shadow">
-                      <h4 className="font-medium text-gray-800 mb-2 flex items-center">
-                        <Tag className="h-4 w-4 mr-1 text-teal-600" />
-                        Variant {i + 1}
-                      </h4>
-                      
-                      <div className="bg-white p-3 rounded border border-gray-200 mb-3">
-                        <p className="text-gray-700 whitespace-pre-line">{variant.message}</p>
-                      </div>
-                      
-                      <div className="bg-teal-50 p-3 rounded mb-3">
-                        <h5 className="text-sm font-medium text-teal-800 mb-1 flex items-center">
-                          <Lightbulb className="h-3 w-3 mr-1" />
-                          Image Idea
-                        </h5>
-                        <p className="text-sm text-teal-700">{variant.imageIdea}</p>
-                      </div>
-                      
-                      <div className="bg-gray-100 p-3 rounded">
-                        <h5 className="text-sm font-medium text-gray-700 mb-1">Rationale</h5>
-                        <p className="text-sm text-gray-600">{variant.rationale}</p>
-                      </div>
+              {aiContentType === 'segment' && (
+                <div className="space-y-4">
+                  <div className="bg-indigo-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-indigo-800 mb-2">Generated Segment Rules</h4>
+                    <div className="bg-white p-3 rounded border border-indigo-100">
+                      <pre className="text-sm text-gray-700 overflow-x-auto">
+                        {JSON.stringify(aiContent, null, 2)}
+                      </pre>
                     </div>
-                  ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -398,7 +319,7 @@ const Campaigns = () => {
           <button 
             className="flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors shadow-sm font-medium"
             onClick={() => {
-              setSelectedCampaign(null);
+              setSelectedCampaignId(null);
               setCampaignLogs(communicationLogs);
               setShowLogsModal(true);
             }}
@@ -596,18 +517,18 @@ const Campaigns = () => {
                           <Sparkles className="h-5 w-5" />
                         </button>
                         <button
-                          className="p-1 rounded-md text-indigo-600 hover:bg-indigo-50 transition-colors"
-                          onClick={() => getOptimalSendTime(campaign)}
-                          title="Optimal Time"
-                        >
-                          <Clock className="h-5 w-5" />
-                        </button>
-                        <button
                           className="p-1 rounded-md text-teal-600 hover:bg-teal-50 transition-colors"
                           onClick={() => generateMessageVariants(campaign)}
                           title="Message Variants"
                         >
                           <MessageSquare className="h-5 w-5" />
+                        </button>
+                        <button
+                          className="p-1 rounded-md text-indigo-600 hover:bg-indigo-50 transition-colors"
+                          onClick={() => generateSegmentRules(campaign)}
+                          title="Segment Rules"
+                        >
+                          <Users className="h-5 w-5" />
                         </button>
                       </div>
                     </td>

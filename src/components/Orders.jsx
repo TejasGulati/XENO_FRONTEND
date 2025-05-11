@@ -1,3 +1,4 @@
+// src/components/Orders.jsx
 import { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { 
@@ -14,15 +15,14 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  AlertTriangle,
   Plus,
   Edit,
   Trash2,
   RefreshCw,
-  BarChart2,
   ArrowUpDown,
   Sliders,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import OrderModal from './OrderModal';
 
@@ -44,27 +44,45 @@ const Orders = () => {
   const [sortOrder, setSortOrder] = useState('desc');
   const [showModal, setShowModal] = useState(false);
   const [currentOrder, setCurrentOrder] = useState(null);
+  const [dateFilter, setDateFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
-  const [dateFilter, setDateFilter] = useState('all');
-  
-  const filteredOrders = orders.filter(order => {
-    const orderId = order?._id?.toLowerCase() || '';
-    const customerName = order?.customer?.name?.toLowerCase() || '';
-    const searchTermLower = searchTerm.toLowerCase();
-    
-    const matchesSearch = orderId.includes(searchTermLower) || customerName.includes(searchTermLower);
-    const matchesStatus = statusFilter === 'all' || order?.status === statusFilter;
-    
-    const matchesDate = dateFilter === 'all' || 
-      (dateFilter === 'today' && new Date(order.orderDate).toDateString() === new Date().toDateString()) ||
-      (dateFilter === 'week' && (new Date() - new Date(order.orderDate)) < 7 * 24 * 60 * 60 * 1000) ||
-      (dateFilter === 'month' && (new Date() - new Date(order.orderDate)) < 30 * 24 * 60 * 60 * 1000);
-    
-    return matchesSearch && matchesStatus && matchesDate;
-  }).sort((a, b) => {
+  const [submitting, setSubmitting] = useState(false);
+  const [pendingOrders, setPendingOrders] = useState([]);
+  const [exportLoading, setExportLoading] = useState(false);
+
+  const getCustomerDetails = (orderCustomer) => {
+    if (!orderCustomer) return { name: 'N/A', email: 'No email' };
+    if (typeof orderCustomer === 'object') return orderCustomer;
+    return customers.find(c => c._id === orderCustomer) || { name: 'N/A', email: 'No email' };
+  };
+
+  const filteredOrders = [
+    ...pendingOrders,
+    ...orders.filter(order => {
+      const customer = getCustomerDetails(order.customer);
+      const matchesSearch = order._id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+      
+      const matchesDate = dateFilter === 'all' || 
+        (dateFilter === 'today' && new Date(order.orderDate).toDateString() === new Date().toDateString()) ||
+        (dateFilter === 'week' && (new Date() - new Date(order.orderDate)) < 7 * 24 * 60 * 60 * 1000) ||
+        (dateFilter === 'month' && (new Date() - new Date(order.orderDate)) < 30 * 24 * 60 * 60 * 1000);
+      
+      return matchesSearch && matchesStatus && matchesDate;
+    })
+  ].sort((a, b) => {
     const aValue = a[sortBy] || '';
     const bValue = b[sortBy] || '';
+    
+    if (sortBy === 'orderDate') {
+      const dateA = new Date(aValue);
+      const dateB = new Date(bValue);
+      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+    }
     
     if (sortOrder === 'asc') {
       return aValue > bValue ? 1 : -1;
@@ -94,6 +112,18 @@ const Orders = () => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, dateFilter]);
 
+  useEffect(() => {
+  // Clean up pending orders when real orders are fetched
+  if (orders.length > 0 && pendingOrders.length > 0) {
+    setPendingOrders(prev =>
+      prev.filter(pendingOrder =>
+        !orders.some(order => order._id === pendingOrder._id)
+      )
+    );
+  }
+}, [orders]);
+
+
   const handleSort = (field) => {
     if (sortBy === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -115,86 +145,117 @@ const Orders = () => {
 
   const handleSubmit = async (orderData) => {
     try {
+      setSubmitting(true);
+      
+      // Create temporary order for optimistic UI
+      const tempId = `temp-${Date.now()}`;
+      const tempOrder = {
+        ...orderData,
+        _id: tempId,
+        orderDate: orderData.orderDate || new Date().toISOString()
+      };
+      
+      setPendingOrders(prev => [...prev, tempOrder]);
+      
       if (currentOrder) {
         await updateOrder(currentOrder._id, orderData);
       } else {
         await addOrder(orderData);
       }
+      
+      await fetchAllData();
       setShowModal(false);
-      fetchAllData();
     } catch (error) {
       console.error('Error submitting order:', error);
+      setPendingOrders(prev => prev.filter(o => o._id !== tempId));
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleDelete = async (id) => {
     try {
+      if (id.startsWith('temp-')) {
+        setPendingOrders(prev => prev.filter(o => o._id !== id));
+        return;
+      }
+      
       await deleteOrder(id);
-      fetchAllData();
+      await fetchAllData();
     } catch (error) {
       console.error('Error deleting order:', error);
     }
   };
 
-  const handleRefresh = () => {
-    fetchAllData();
-  };
-
-  const exportOrdersToCSV = () => {
-    if (filteredOrders.length === 0) {
-      alert('No orders to export');
-      return;
+  const handleRefresh = async () => {
+    try {
+      await fetchAllData();
+      setPendingOrders([]);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
     }
-    
-    const headers = [
-      'Order ID',
-      'Customer Name',
-      'Customer Email',
-      'Order Amount',
-      'Status',
-      'Order Date',
-      'ID'
-    ];
-    
-    const csvData = filteredOrders.map(order => [
-      `"${order._id ? order._id.slice(-6) : 'N/A'}"`,
-      `"${(order.customer?.name || 'N/A').replace(/"/g, '""')}"`,
-      `"${(order.customer?.email || 'No email').replace(/"/g, '""')}"`,
-      order.orderAmount ? order.orderAmount.toFixed(2) : '0.00',
-      order.status || 'Unknown',
-      order.orderDate ? new Date(order.orderDate).toLocaleDateString() : 'Unknown date',
-      order._id
-    ]);
-    
-    const allRows = [headers, ...csvData];
-    const csvContent = allRows.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `orders-export-${timestamp}.csv`;
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    
-    setTimeout(() => {
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }, 100);
   };
 
-  if (loading) return (
+  const exportOrdersToCSV = async () => {
+    try {
+      setExportLoading(true);
+      
+      if (filteredOrders.length === 0) {
+        setExportLoading(false);
+        alert('No orders to export');
+        return;
+      }
+      
+      const headers = [
+        'Order ID', 'Customer Name', 'Customer Email', 
+        'Order Amount', 'Status', 'Order Date', 'Items Count'
+      ].join(',');
+      
+      const csvData = filteredOrders.map(order => {
+        const customer = getCustomerDetails(order.customer);
+        const name = customer?.name ? customer.name.replace(/"/g, '""') : 'N/A';
+        const email = customer?.email ? customer.email.replace(/"/g, '""') : 'No email';
+        
+        return [
+          `"${order._id || 'N/A'}"`,
+          `"${name}"`,
+          `"${email}"`,
+          order.orderAmount ? order.orderAmount.toFixed(2) : '0.00',
+          `"${order.status || 'unknown'}"`,
+          `"${new Date(order.orderDate).toLocaleDateString()}"`,
+          order.items?.length || 0
+        ].join(',');
+      }).filter(row => row !== null);
+      
+      const csvContent = [headers, ...csvData].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `orders_export_${new Date().toISOString().slice(0, 10)}.csv`);
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      alert('Error exporting order data. Please try again.');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  if (loading && !orders.length) return (
     <div className="flex justify-center items-center h-64">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <Loader2 className="animate-spin h-12 w-12 text-blue-600" />
+      <span className="ml-3 text-gray-700">Loading orders...</span>
     </div>
   );
   
   if (error) return (
     <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
-      <div className="flex">
+      <div className="flex items-center">
         <XCircle className="h-6 w-6 text-red-500 mr-3" />
         <p className="text-red-800">Error: {error}</p>
       </div>
@@ -209,15 +270,16 @@ const Orders = () => {
         onSubmit={handleSubmit}
         order={currentOrder}
         customers={customers}
+        isSubmitting={submitting}
       />
       
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div className="flex items-center">
           <div className="bg-gradient-to-br from-blue-100 to-indigo-100 p-2 rounded-xl mr-3">
             <ShoppingBag className="h-8 w-8 text-blue-600" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Orders</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Orders</h1>
             <p className="text-sm text-gray-500">Manage customer orders and transactions</p>
           </div>
         </div>
@@ -243,21 +305,21 @@ const Orders = () => {
       
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden mb-6">
         <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
-          <div className="flex items-center justify-between gap-4">
-            <div className="relative flex-grow max-w-md">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="relative w-full md:max-w-md">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search className="h-5 w-5 text-gray-400" />
               </div>
               <input
                 type="text"
-                placeholder="Search orders by ID or customer..."
+                placeholder="Search orders by ID, customer name or email..."
                 className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Calendar className="h-4 w-4 text-gray-400" />
@@ -293,11 +355,21 @@ const Orders = () => {
               </div>
               
               <button 
-                className="px-3 py-2 bg-white border border-gray-300 rounded-lg flex items-center text-gray-600 hover:bg-gray-50 transition-colors"
+                className={`flex items-center px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors ${exportLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
                 onClick={exportOrdersToCSV}
+                disabled={exportLoading}
               >
-                <Download className="h-4 w-4 mr-1" />
-                Export
+                {exportLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-1" />
+                    Export
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -363,71 +435,80 @@ const Orders = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {currentOrders.map(order => (
-                  <tr key={order._id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="bg-blue-100 p-2 rounded-lg mr-3">
-                          <ShoppingBag className="h-5 w-5 text-blue-600" />
+                {currentOrders.map(order => {
+                  const customer = getCustomerDetails(order.customer);
+                  const isPending = order._id?.startsWith('temp-');
+                  
+                  return (
+                    <tr key={order._id} className={`hover:bg-gray-50 transition-colors ${isPending ? 'opacity-70' : ''}`}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className={`p-2 rounded-lg mr-3 ${isPending ? 'bg-gray-200' : 'bg-blue-100'}`}>
+                            <ShoppingBag className={`h-5 w-5 ${isPending ? 'text-gray-600' : 'text-blue-600'}`} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {order._id ? `#${order._id.slice(-6)}` : 'N/A'}
+                            </p>
+                            {isPending && <p className="text-xs text-gray-500">Processing...</p>}
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">#{order._id ? order._id.slice(-6) : 'N/A'}</p>
-                          <p className="text-xs text-gray-500">ID: #{order._id.slice(-6)}</p>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 font-medium mr-3">
+                            {customer?.name ? customer.name.charAt(0).toUpperCase() : 'N'}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{customer?.name || 'N/A'}</p>
+                            <p className="text-xs text-gray-500">{customer?.email || 'No email'}</p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 font-medium mr-3">
-                          {order.customer?.name ? order.customer.name.charAt(0).toUpperCase() : 'N'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium">
+                          ₹{order.orderAmount ? order.orderAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{order.customer?.name || 'N/A'}</p>
-                          <p className="text-xs text-gray-500">{order.customer?.email || 'No email'}</p>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full
+                          ${order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'}`}>
+                          {order.status === 'completed' && <CheckCircle className="h-3 w-3 mr-1" />}
+                          {order.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
+                          {order.status === 'cancelled' && <XCircle className="h-3 w-3 mr-1" />}
+                          {order.status || 'Unknown'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">
+                          {order.orderDate ? new Date(order.orderDate).toLocaleDateString('en-IN') : 'Unknown date'}
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium">
-                        ₹{order.orderAmount ? order.orderAmount.toFixed(2) : '0.00'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full
-                        ${order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'}`}>
-                        {order.status === 'completed' && <CheckCircle className="h-3 w-3 mr-1" />}
-                        {order.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
-                        {order.status === 'cancelled' && <XCircle className="h-3 w-3 mr-1" />}
-                        {order.status || 'Unknown'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">
-                        {order.orderDate ? new Date(order.orderDate).toLocaleDateString() : 'Unknown date'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex items-center space-x-2">
-                        <button 
-                          className="p-1 rounded-md text-blue-600 hover:bg-blue-50 transition-colors"
-                          onClick={() => handleEdit(order)}
-                          title="Edit"
-                        >
-                          <Edit className="h-5 w-5" />
-                        </button>
-                        <button
-                          className="p-1 rounded-md text-red-600 hover:bg-red-50 transition-colors"
-                          onClick={() => handleDelete(order._id)}
-                          title="Delete"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <div className="flex items-center space-x-2">
+                          <button 
+                            className="p-1 rounded-md text-blue-600 hover:bg-blue-50 transition-colors"
+                            onClick={() => handleEdit(order)}
+                            title="Edit"
+                            disabled={isPending}
+                          >
+                            <Edit className="h-5 w-5" />
+                          </button>
+                          <button
+                            className="p-1 rounded-md text-red-600 hover:bg-red-50 transition-colors"
+                            onClick={() => handleDelete(order._id)}
+                            title="Delete"
+                            disabled={isPending}
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           ) : (
@@ -449,7 +530,7 @@ const Orders = () => {
         </div>
         
         {currentOrders.length > 0 && (
-          <div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t border-gray-200">
+          <div className="bg-gray-50 px-6 py-3 flex flex-col md:flex-row items-center justify-between border-t border-gray-200 gap-4">
             <div className="text-sm text-gray-500">
               Showing <span className="font-medium">{indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredOrders.length)}</span> of <span className="font-medium">{filteredOrders.length}</span> orders
             </div>

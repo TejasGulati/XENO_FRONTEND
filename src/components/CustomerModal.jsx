@@ -1,4 +1,4 @@
-// CustomerModal.jsx
+// src/components/CustomerModal.jsx
 import { useState, useEffect } from 'react';
 import {
   X,
@@ -8,15 +8,13 @@ import {
   DollarSign,
   CalendarDays,
   Activity,
-  Sparkles,
   CheckCircle,
   XCircle,
   ChevronDown,
-  ChevronUp,
-  Sliders
+  Loader2
 } from 'lucide-react';
 
-const CustomerModal = ({ isOpen, onClose, onSubmit, customer }) => {
+const CustomerModal = ({ isOpen, onClose, onSubmit, customer, isSubmitting }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -27,7 +25,6 @@ const CustomerModal = ({ isOpen, onClose, onSubmit, customer }) => {
   });
   
   const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (customer) {
@@ -85,30 +82,33 @@ const CustomerModal = ({ isOpen, onClose, onSubmit, customer }) => {
       newErrors.phone = 'Invalid phone number';
     }
     
+    if (formData.totalSpend < 0) {
+      newErrors.totalSpend = 'Total spend cannot be negative';
+    }
+    
+    if (formData.visitCount < 0) {
+      newErrors.visitCount = 'Visit count cannot be negative';
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (!validate()) return;
-    
-    setIsLoading(true);
-    try {
-      await onSubmit({
+    if (validate()) {
+      onSubmit({
         ...formData,
         lastVisit: formData.lastVisit ? new Date(formData.lastVisit).toISOString() : null
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-[800px] max-h-[90vh] overflow-y-auto border border-gray-200">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-200">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -121,7 +121,8 @@ const CustomerModal = ({ isOpen, onClose, onSubmit, customer }) => {
             </div>
             <button 
               onClick={onClose} 
-              className="text-gray-500 hover:text-gray-700 transition-colors p-1 rounded-full hover:bg-gray-100"
+              disabled={isSubmitting}
+              className="text-gray-500 hover:text-gray-700 transition-colors p-1 rounded-full hover:bg-gray-100 disabled:opacity-50"
             >
               <X className="h-6 w-6" />
             </button>
@@ -156,9 +157,10 @@ const CustomerModal = ({ isOpen, onClose, onSubmit, customer }) => {
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    className={`pl-10 w-full px-3 py-2 border ${errors.name ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                    className={`pl-10 w-full px-3 py-2 border ${errors.name ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50`}
                     placeholder="John Doe"
                     required
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -174,9 +176,10 @@ const CustomerModal = ({ isOpen, onClose, onSubmit, customer }) => {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className={`pl-10 w-full px-3 py-2 border ${errors.email ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                    className={`pl-10 w-full px-3 py-2 border ${errors.email ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50`}
                     placeholder="john@example.com"
                     required
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -192,8 +195,9 @@ const CustomerModal = ({ isOpen, onClose, onSubmit, customer }) => {
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
-                    className={`pl-10 w-full px-3 py-2 border ${errors.phone ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                    className={`pl-10 w-full px-3 py-2 border ${errors.phone ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50`}
                     placeholder="+1 (555) 123-4567"
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -209,7 +213,8 @@ const CustomerModal = ({ isOpen, onClose, onSubmit, customer }) => {
                     name="lastVisit"
                     value={formData.lastVisit}
                     onChange={handleChange}
-                    className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -225,9 +230,10 @@ const CustomerModal = ({ isOpen, onClose, onSubmit, customer }) => {
                     name="totalSpend"
                     value={formData.totalSpend}
                     onChange={handleChange}
-                    className="w-full pl-10 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full pl-10 px-3 py-2 border ${errors.totalSpend ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50`}
                     min="0"
                     step="0.01"
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -243,8 +249,9 @@ const CustomerModal = ({ isOpen, onClose, onSubmit, customer }) => {
                     name="visitCount"
                     value={formData.visitCount}
                     onChange={handleChange}
-                    className="w-full pl-10 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full pl-10 px-3 py-2 border ${errors.visitCount ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50`}
                     min="0"
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -254,23 +261,26 @@ const CustomerModal = ({ isOpen, onClose, onSubmit, customer }) => {
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                disabled={isSubmitting}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={isLoading}
-                className={`px-4 py-2 rounded-lg text-white flex items-center ${
-                  isLoading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
-                }`}
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center min-w-[120px]"
               >
-                {isLoading ? (
+                {isSubmitting ? (
                   <>
-                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                    Processing...
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {customer ? 'Updating...' : 'Creating...'}
                   </>
-                ) : customer ? 'Update Customer' : 'Add Customer'}
+                ) : (
+                  <>
+                    {customer ? 'Update Customer' : 'Create Customer'}
+                  </>
+                )}
               </button>
             </div>
           </form>

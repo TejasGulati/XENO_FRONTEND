@@ -1,30 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  X,
-  Mail,
-  CheckCircle,
-  XCircle,
-  Clock,
-  ChevronDown,
-  ChevronUp,
-  Filter,
-  List,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  RefreshCw,
-  AlertTriangle,
-  BarChart2,
-  PieChart,
-  Download,
-  Sliders,
-  Calendar,
-  User,
-  MessageSquare
+  X, Mail, CheckCircle, XCircle, Clock, ChevronDown,
+  ChevronUp, Filter, List, ChevronLeft, ChevronRight,Calendar,
+  Search, RefreshCw, AlertTriangle, BarChart2, Download, User, MessageSquare
 } from 'lucide-react';
-import { useState } from 'react';
 
-const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
+const CampaignLogsModal = ({ isOpen, onClose, campaign, logs: initialLogs, loading }) => {
+  const [logs, setLogs] = useState(initialLogs || []);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('sentAt');
@@ -32,6 +14,34 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
   const [expandedLog, setExpandedLog] = useState(null);
   const [viewMode, setViewMode] = useState('table');
   const [dateFilter, setDateFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
+
+  useEffect(() => {
+    setLogs(initialLogs || []);
+    setCurrentPage(1);
+  }, [initialLogs]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const eventSource = new EventSource(`${import.meta.env.VITE_API_URL}/campaigns/logs/stream`);
+      
+      eventSource.onmessage = (event) => {
+        const updatedLog = JSON.parse(event.data);
+        setLogs(prev => prev.map(log => 
+          log._id === updatedLog._id ? updatedLog : log
+        ));
+      };
+
+      eventSource.onerror = () => {
+        eventSource.close();
+      };
+
+      return () => {
+        eventSource.close();
+      };
+    }
+  }, [isOpen]);
 
   const filteredLogs = logs.filter(log => {
     const matchesSearch = log.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -50,12 +60,31 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
     const aValue = a[sortBy];
     const bValue = b[sortBy];
     
+    if (aValue === bValue) return 0;
+    
     if (sortOrder === 'asc') {
       return aValue > bValue ? 1 : -1;
     } else {
       return aValue < bValue ? 1 : -1;
     }
   });
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentLogs = filteredLogs.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
+
+  const nextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const prevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
 
   const handleSort = (field) => {
     if (sortBy === field) {
@@ -64,6 +93,7 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
       setSortBy(field);
       setSortOrder('desc');
     }
+    setCurrentPage(1);
   };
 
   const toggleExpandLog = (logId) => {
@@ -101,16 +131,15 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
       `"${(log.customer?.name || 'N/A').replace(/"/g, '""')}"`,
       `"${(log.customer?.email || 'N/A').replace(/"/g, '""')}"`,
       log.status,
-      new Date(log.sentAt).toLocaleString(),
-      log.deliveredAt ? new Date(log.deliveredAt).toLocaleString() : 'N/A',
+      new Date(log.sentAt).toISOString(),
+      log.deliveredAt ? new Date(log.deliveredAt).toISOString() : 'N/A',
       `"${(log.message || '').replace(/"/g, '""')}"`,
       `"${(log.errorMessage || '').replace(/"/g, '""')}"`,
       `"${(log.campaign?.name || 'N/A').replace(/"/g, '""')}"`,
       log._id
     ]);
     
-    const allRows = [headers, ...csvData];
-    const csvContent = allRows.map(row => row.join(',')).join('\n');
+    const csvContent = [headers, ...csvData].map(row => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -121,14 +150,16 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
     
     link.setAttribute('href', url);
     link.setAttribute('download', filename);
-    link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
-    
-    setTimeout(() => {
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }, 100);
+    document.body.removeChild(link);
+  };
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('all');
+    setDateFilter('all');
+    setCurrentPage(1);
   };
 
   if (!isOpen) return null;
@@ -136,7 +167,6 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-2xl w-full min-w-[1200px] max-w-[90vw] max-h-[90vh] flex flex-col overflow-hidden border border-gray-200">
-        {/* Header */}
         <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -144,7 +174,7 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
                 {campaign ? `Logs for ${campaign.name}` : 'All Communication Logs'}
               </h2>
               <p className="text-sm text-gray-600 mt-1">
-                {campaign ? `Audience: ${campaign.audienceSize.toLocaleString()} customers` : ''}
+                {campaign ? `Audience: ${campaign.audienceSize?.toLocaleString() || 0} customers` : ''}
               </p>
             </div>
             <button 
@@ -156,7 +186,6 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
             </button>
           </div>
           
-          {/* Filters */}
           <div className="flex items-center justify-between gap-4">
             <div className="relative flex-grow max-w-md">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -167,7 +196,10 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
                 placeholder="Search logs by customer or message..."
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
               />
             </div>
             
@@ -179,7 +211,10 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
                 <select
                   className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
                   value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
+                  onChange={(e) => {
+                    setDateFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
                   aria-label="Filter by date"
                 >
                   <option value="all">All Time</option>
@@ -197,7 +232,10 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
                 <select
                   className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
                   aria-label="Filter by status"
                 >
                   <option value="all">All Statuses</option>
@@ -240,7 +278,6 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
           </div>
         </div>
         
-        {/* Content */}
         <div className="overflow-y-auto flex-1">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-64">
@@ -256,11 +293,7 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
                 <h3 className="text-lg font-medium text-gray-800 mb-2">No matching logs found</h3>
                 <p className="text-gray-500 mb-4">Try adjusting your search filters to find what you're looking for.</p>
                 <button 
-                  onClick={() => {
-                    setSearchTerm('');
-                    setStatusFilter('all');
-                    setDateFilter('all');
-                  }}
+                  onClick={resetFilters}
                   className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center justify-center"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
@@ -275,7 +308,6 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
                 Delivery Statistics
               </h3>
               
-              {/* Stats Cards */}
               <div className="grid grid-cols-4 gap-6 mb-6">
                 <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between">
@@ -340,7 +372,6 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
                 </div>
               </div>
               
-              {/* Status Distribution */}
               <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow mb-6">
                 <h4 className="text-sm font-medium text-gray-500 mb-4">Status Distribution</h4>
                 <div className="h-4 w-full bg-gray-200 rounded-full overflow-hidden flex">
@@ -379,23 +410,6 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
                     <span className="h-2 w-2 bg-yellow-500 rounded-full mr-1"></span>
                     Pending: {stats.pending}
                   </span>
-                </div>
-              </div>
-              
-              {/* Charts */}
-              <div className="grid grid-cols-2 gap-6">
-                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <h4 className="text-xs font-medium text-gray-500 mb-3">Delivery Timeline</h4>
-                  <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400">
-                    <p>Timeline chart will appear here</p>
-                  </div>
-                </div>
-                
-                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <h4 className="text-xs font-medium text-gray-500 mb-3">Status by Time of Day</h4>
-                  <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400">
-                    <p>Time distribution chart will appear here</p>
-                  </div>
                 </div>
               </div>
             </div>
@@ -447,7 +461,7 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredLogs.map(log => (
+                  {currentLogs.map(log => (
                     <React.Fragment key={log._id}>
                       <tr 
                         className="hover:bg-gray-50 cursor-pointer transition-colors"
@@ -588,17 +602,27 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs, loading }) => {
           )}
         </div>
         
-        {/* Footer */}
         <div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t border-gray-200">
           <div className="text-sm text-gray-500">
-            Showing <span className="font-medium">{filteredLogs.length}</span> of <span className="font-medium">{logs.length}</span> logs
+            Showing <span className="font-medium">{indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredLogs.length)}</span> of <span className="font-medium">{filteredLogs.length}</span> logs
           </div>
           <div className="flex items-center space-x-2">
-            <button className="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
+            <button 
+              onClick={prevPage}
+              disabled={currentPage === 1}
+              className="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <ChevronLeft className="h-4 w-4 mr-1" />
               Previous
             </button>
-            <button className="px-3 py-1 bg-blue-600 border border-blue-600 rounded-md text-sm text-white hover:bg-blue-700 flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
+            <span className="text-sm text-gray-600">
+              Page {currentPage} of {totalPages || 1}
+            </span>
+            <button 
+              onClick={nextPage}
+              disabled={currentPage >= totalPages}
+              className="px-3 py-1 bg-blue-600 border border-blue-600 rounded-md text-sm text-white hover:bg-blue-700 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               Next
               <ChevronRight className="h-4 w-4 ml-1" />
             </button>
