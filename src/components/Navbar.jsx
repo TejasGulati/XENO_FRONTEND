@@ -4,10 +4,12 @@ import {
   ShoppingBag,
   Megaphone
 } from 'lucide-react';
+import Auth from './Auth';
+import { SignedIn, SignedOut } from '@clerk/clerk-react';
 
 const Navbar = () => {
   const location = useLocation();
-
+  
   return (
     <nav className="bg-white border-b border-gray-100 shadow-sm">
       <div className="container mx-auto px-6">
@@ -21,27 +23,34 @@ const Navbar = () => {
               Xeno CRM
             </span>
           </Link>
-
-          {/* Navigation Links */}
-          <div className="flex space-x-6 items-center">
-            <NavItem 
-              to="/customers" 
-              icon={<Users className="h-5 w-5" />} 
-              text="Customers" 
-              isActive={location.pathname === '/customers'}
-            />
-            <NavItem 
-              to="/orders" 
-              icon={<ShoppingBag className="h-5 w-5" />} 
-              text="Orders" 
-              isActive={location.pathname === '/orders'}
-            />
-            <NavItem 
-              to="/campaigns" 
-              icon={<Megaphone className="h-5 w-5" />} 
-              text="Campaigns" 
-              isActive={location.pathname === '/campaigns'}
-            />
+          
+          <div className="flex items-center space-x-6">
+            {/* Navigation Links - Only visible when signed in */}
+            <SignedIn>
+              <div className="flex space-x-6">
+                <NavItem
+                  to="/customers"
+                  icon={<Users className="h-5 w-5" />}
+                  text="Customers"
+                  isActive={location.pathname === '/customers'}
+                />
+                <NavItem
+                  to="/orders"
+                  icon={<ShoppingBag className="h-5 w-5" />}
+                  text="Orders"
+                  isActive={location.pathname === '/orders'}
+                />
+                <NavItem
+                  to="/campaigns"
+                  icon={<Megaphone className="h-5 w-5" />}
+                  text="Campaigns"
+                  isActive={location.pathname === '/campaigns'}
+                />
+              </div>
+            </SignedIn>
+            
+            {/* Auth Component */}
+            <Auth />
           </div>
         </div>
       </div>
@@ -49,13 +58,13 @@ const Navbar = () => {
   );
 };
 
-// Enhanced NavItem with active state
+// NavItem component remains the same
 const NavItem = ({ to, icon, text, isActive }) => (
   <Link
     to={to}
     className={`relative flex items-center space-x-2 px-2 py-1.5 rounded-md text-sm font-medium transition-colors
-      ${isActive 
-        ? 'text-blue-600 bg-blue-50' 
+      ${isActive
+        ? 'text-blue-600 bg-blue-50'
         : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
       }`}
   >
