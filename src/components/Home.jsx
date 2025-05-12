@@ -19,7 +19,8 @@ import {
   Lightbulb,
   Filter,
   List,
-  RefreshCw
+  RefreshCw,
+  PlayCircle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SignedIn, SignedOut } from '@clerk/clerk-react';
@@ -38,7 +39,7 @@ const Home = () => {
     <div className="bg-gray-50 min-h-screen pb-12">
       <SignedOut>
         <div className="container mx-auto px-4 py-12">
-          <div className="w-full mx-auto text-center mb-12">
+          <div className="w-full mx-auto text-center mb-8">
             <div className="flex justify-center mb-6">
               <div className="h-20 w-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-3xl">X</span>
@@ -47,9 +48,21 @@ const Home = () => {
             <h1 className="text-4xl font-bold text-gray-800 mb-4">
               Welcome to <span className="text-blue-600">Xeno CRM</span>
             </h1>
-            <p className="text-xl text-gray-600 mb-8 w-full mx-auto">
+            <p className="text-xl text-gray-600 mb-6 w-full mx-auto">
               The all-in-one customer relationship management platform designed to streamline your business operations and boost customer engagement.
             </p>
+
+            <div className="flex justify-center mb-6">
+              <a 
+                href="https://drive.google.com/file/d/1oKZXHdgO5574N4Da0hLgru9HO8j3ML1e/view" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+              >
+                <PlayCircle className="h-5 w-5 mr-2" />
+                Watch Demo Video
+              </a>
+            </div>
             
             <div className="flex justify-center mb-12">
               <Auth />
@@ -595,8 +608,7 @@ const StatMiniCard = ({ count, label, icon, color }) => {
     blue: 'bg-blue-50 text-blue-600',
     purple: 'bg-purple-50 text-purple-600',
     indigo: 'bg-indigo-50 text-indigo-600'
-  };
-  
+  };  
   return (
     <div className={`${colorClasses[color]} p-3 rounded-lg text-center`}>
       <div className="flex justify-between items-center">
