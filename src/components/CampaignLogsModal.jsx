@@ -22,27 +22,6 @@ const CampaignLogsModal = ({ isOpen, onClose, campaign, logs: initialLogs, loadi
     setCurrentPage(1);
   }, [initialLogs]);
 
-  useEffect(() => {
-    if (isOpen) {
-      const eventSource = new EventSource(`${import.meta.env.VITE_API_URL}/campaigns/logs/stream`);
-      
-      eventSource.onmessage = (event) => {
-        const updatedLog = JSON.parse(event.data);
-        setLogs(prev => prev.map(log => 
-          log._id === updatedLog._id ? updatedLog : log
-        ));
-      };
-
-      eventSource.onerror = () => {
-        eventSource.close();
-      };
-
-      return () => {
-        eventSource.close();
-      };
-    }
-  }, [isOpen]);
-
   const filteredLogs = logs.filter(log => {
     const matchesSearch = log.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.customer?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
